@@ -52,3 +52,5 @@ The desktop tray offers Show / hide Localist and Quit. Left-click toggles the wi
 ## Data
 
 Web data remains in `data/projects.json`. Desktop data remains in the application's data folder, usually `~/.local/share/com.mod.localist/projects.json` on Linux. Desktop exports go to Downloads. No data is moved between versions automatically.
+
+<!--  "version": "1.20.5", // release/branch(v2(0)=>20:int)/ref-change -->
