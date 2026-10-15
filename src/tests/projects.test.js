@@ -1,11 +1,46 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { filterProjects, generateShowcase, validateIndex, validateProjects } from './projects.js'
+import { filterProjects, generateShowcase, validateIndex, validateProjects } from '../projects.js'
+import { exportJSON, importJSON } from '../helpers/json.js'
 
-const project = { id: 'test-1', name: 'Test project', path: '/private/test/project', description: 'Test description', category: 'Custom category', tags: ['Test tag'], status: 'progress', public: true, icon: 'folder', updatedAt: '2026-05-21T14:30:00Z' }
+const project = {
+  id: 'test-1',
+  name: 'Test project',
+  path: '/private/test/project',
+  description: 'Test description',
+  category: 'Custom category',
+  tags: ['Test tag'],
+  status: 'progress',
+  public: true,
+  icon: 'folder',
+  updatedAt: '2026-05-21T14:30:00Z'
+}
+
+test('extracted JSON helpers receive their dependencies explicitly', async () => {
+  const messages = []
+  exportJSON({ loaded: false, projects: [], categories: [], notify: m => messages.push(m) })
+  assert.deepEqual(messages, ['Load the JSON index before exporting.'])
+  const e = { target: { value: 'projects.json', files: [{ size: 2, text: async () => '[]' }] } }
+  await importJSON(e, {
+    projects: [project],
+    categories: ['Custom'],
+    persist: async (projects, categories) => {
+      assert.deepEqual(projects, [project])
+      assert.deepEqual(categories, ['Custom'])
+      return true
+    },
+    notify: m => messages.push(m),
+    setModal: value => assert.equal(value, null)
+  })
+  assert.equal(e.target.value, '')
+  assert.equal(messages[1], 'Imported 0 projects')
+})
 
 test('a new index has no projects or preset categories', () => {
-  assert.deepEqual(validateIndex({ projects: [], categories: [] }), { projects: [], categories: [] })
+  assert.deepEqual(validateIndex({ projects: [], categories: [] }), {
+    projects: [],
+    categories: []
+  })
   assert.deepEqual(validateIndex([]), { projects: [], categories: [] })
 })
 
@@ -34,7 +69,13 @@ test('invalid imports are rejected and unknown fields are not persisted', () => 
 })
 
 test('public HTML excludes private projects and all local paths', () => {
-  const privateProject = { ...project, id: 'private', name: 'Private project', description: 'Private description', public: false }
+  const privateProject = {
+    ...project,
+    id: 'private',
+    name: 'Private project',
+    description: 'Private description',
+    public: false
+  }
   const html = generateShowcase([project, privateProject])
   assert.ok(html.includes('<h2>Test project</h2>'))
   assert.ok(!html.includes(privateProject.name))
@@ -43,7 +84,18 @@ test('public HTML excludes private projects and all local paths', () => {
 })
 
 test('showcase content is escaped against HTML injection', () => {
-  const html = generateShowcase([{ ...project, name: '<script>alert(1)</script>', description: '<img src=x onerror=alert(1)>', category: '<b>Custom</b>', tags: ['<iframe>'] }], '</title><script>bad()</script>')
+  const html = generateShowcase(
+    [
+      {
+        ...project,
+        name: '<script>alert(1)</script>',
+        description: '<img src=x onerror=alert(1)>',
+        category: '<b>Custom</b>',
+        tags: ['<iframe>']
+      }
+    ],
+    '</title><script>bad()</script>'
+  )
   assert.ok(!html.includes('<script>'))
   assert.ok(!html.includes('<img'))
   assert.ok(!html.includes('<iframe>'))

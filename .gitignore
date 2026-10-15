@@ -24,6 +24,6 @@ dist-ssr
 *.sw?
 
 .agents
-
+resources
 # Private local project index
 data/

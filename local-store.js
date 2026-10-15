@@ -11,20 +11,31 @@ export function createProjectStore(file) {
     return validated
   }
   function read() {
-    try { return validateIndex(JSON.parse(readFileSync(file, 'utf8'))) }
-    catch (error) {
+    try {
+      return validateIndex(JSON.parse(readFileSync(file, 'utf8')))
+    } catch (error) {
       if (error.code === 'ENOENT') return write({ projects: [], categories: [] })
       throw error
     }
   }
-  return { read, write(index) { read(); return write(index) } }
+  return {
+    read,
+    write(index) {
+      read()
+      return write(index)
+    }
+  }
 }
 
 export function projectMiddleware(store) {
   return async (req, res, next) => {
     if (req.url?.split('?')[0] !== '/api/projects') return next()
     const send = (status, value) => {
-      res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' })
+      res.writeHead(status, {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff'
+      })
       res.end(JSON.stringify(value))
     }
     const origin = req.headers.origin
@@ -33,7 +44,10 @@ export function projectMiddleware(store) {
     }
     try {
       if (req.method === 'GET') return send(200, store.read())
-      if (req.method !== 'PUT') { res.setHeader('Allow', 'GET, PUT'); return send(405, { error: 'Method not allowed.' }) }
+      if (req.method !== 'PUT') {
+        res.setHeader('Allow', 'GET, PUT')
+        return send(405, { error: 'Method not allowed.' })
+      }
       if (req.headers['content-type']?.split(';')[0] !== 'application/json') return send(415, { error: 'Send an application/json index.' })
       const chunks = []
       let size = 0
@@ -43,11 +57,16 @@ export function projectMiddleware(store) {
         chunks.push(chunk)
       }
       let index
-      try { index = validateIndex(JSON.parse(Buffer.concat(chunks).toString('utf8'))) }
-      catch (error) { return send(400, { error: error instanceof SyntaxError ? 'Invalid JSON.' : error.message }) }
+      try {
+        index = validateIndex(JSON.parse(Buffer.concat(chunks).toString('utf8')))
+      } catch (error) {
+        return send(400, { error: error instanceof SyntaxError ? 'Invalid JSON.' : error.message })
+      }
       return send(200, store.write(index))
     } catch {
-      return send(500, { error: 'Could not read or save data/projects.json. Check the file format and folder permissions. The existing file has not been replaced.' })
+      return send(500, {
+        error: 'Could not read or save data/projects.json. Check the file format and folder permissions. The existing file has not been replaced.'
+      })
     }
   }
 }
