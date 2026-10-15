@@ -2,6 +2,35 @@
 
 Localist is a local project organizer for tracking folders, repository references, and project status. It runs in a browser or as a desktop app, stores your index as JSON on your computer, and can export public projects as an HTML showcase.
 
+<p align="center">
+  <a href=".github/assets/overview.png"><img src=".github/assets/overview.png" alt="Localist project overview with status totals and demo projects" width="960"></a>
+</p>
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <a href=".github/assets/editor.png"><img src=".github/assets/editor.png" alt="Project editor with local path, repository URLs, tags, and visibility settings" width="100%"></a>
+      <br><sub>Project editor</sub>
+    </td>
+    <td width="50%" align="center">
+      <a href=".github/assets/actions.png"><img src=".github/assets/actions.png" alt="Project actions menu for copying paths and repositories or updating status" width="100%"></a>
+      <br><sub>Project actions</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <a href=".github/assets/categories.png"><img src=".github/assets/categories.png" alt="Category manager with removal disabled for categories still in use" width="100%"></a>
+      <br><sub>Category management</sub>
+    </td>
+    <td width="50%" align="center">
+      <a href=".github/assets/archive.png"><img src=".github/assets/archive.png" alt="Archived projects view with unarchive and remove actions" width="100%"></a>
+      <br><sub>Archived projects</sub>
+    </td>
+  </tr>
+</table>
+
+## Shared frontend
+
 Edit `src/`, `public/`, and `index.html` once. Web and Tauri use the same frontend.
 
 Vite selects the platform adapter at build time:
