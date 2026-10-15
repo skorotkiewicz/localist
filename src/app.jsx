@@ -93,7 +93,7 @@ export function App() {
         }}
       />
       <div class="main-shell">
-        <WorkspaceHeader status={status} category={category} setMobileNav={setMobileNav} setModal={setModal} />
+        <WorkspaceHeader status={status} category={category} setMobileNav={setMobileNav} />
         <main>
           {loadError && (
             <div class="error-banner" role="alert">
@@ -109,10 +109,12 @@ export function App() {
               <p>A home for everything you’re building, and everything you’ll come back to.</p>
             </div>
             <div class="heading-actions">
+
               <button class="button export-button" onClick={() => exportJSON({ loaded, projects, categories, notify })}>
                 <Icon name="download" size={16} />
                 Export JSON
               </button>
+
               <button class="button primary" onClick={() => edit()}>
                 <Icon name="plus" size={18} />
                 New project

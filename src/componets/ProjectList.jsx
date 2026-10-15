@@ -7,7 +7,6 @@ export default function ProjectList({ projects, categories, loaded, loadError, s
   const [query, setQuery] = useState('')
   const [visibility, setVisibility] = useState('all')
   const [sort, setSort] = useState('updated')
-  const [view, setView] = useState('grid')
   const [menu, setMenu] = useState(null)
   const filtered = filterProjects(projects, { status, category, query, visibility, sort })
 
@@ -43,14 +42,6 @@ export default function ProjectList({ projects, categories, loaded, loadError, s
         <h2>
           {category !== 'all' ? `${category} projects` : status === 'all' ? 'All projects' : STATUS_LABELS[status]} <span>{filtered.length}</span>
         </h2>
-        <div class="view-toggle" aria-label="Project view">
-          <button class={view === 'grid' ? 'selected' : ''} onClick={() => setView('grid')} aria-label="Grid view" aria-pressed={view === 'grid'}>
-            <Icon name="grid" size={16} />
-          </button>
-          <button class={view === 'list' ? 'selected' : ''} onClick={() => setView('list')} aria-label="List view" aria-pressed={view === 'list'}>
-            <Icon name="list" size={17} />
-          </button>
-        </div>
       </div>
       <div class="toolbar">
         <div class="search-box">
@@ -88,7 +79,7 @@ export default function ProjectList({ projects, categories, loaded, loadError, s
           </div>
         </div>
       </div>
-      <div class={`project-grid ${view === 'list' ? 'list-view' : ''}`}>
+      <div class="project-grid list-view">
         {filtered.map(p => (
           <ProjectCard key={p.id} project={p} menu={menu} setMenu={setMenu} update={update} edit={edit} copy={copy} setCategory={setCategory} setQuery={setQuery} />
         ))}

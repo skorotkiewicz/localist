@@ -1,7 +1,7 @@
 import { STATUS_LABELS } from '../projects'
 import Icon from './Icon'
 
-export default function WorkspaceHeader({ status, category, setMobileNav, setModal }) {
+export default function WorkspaceHeader({ status, category, setMobileNav }) {
   return (
     <header class="topbar">
       <div class="breadcrumb">
@@ -12,18 +12,6 @@ export default function WorkspaceHeader({ status, category, setMobileNav, setMod
         <span>My workspace</span>
         <span class="slash">/</span>
         <strong>{category !== 'all' ? category : status === 'all' ? 'All projects' : STATUS_LABELS[status]}</strong>
-      </div>
-      <div class="topbar-right">
-        <span class="local-badge">
-          <span />
-          Local-first. Always.
-        </span>
-        <button class="icon-button help-button" aria-label="About the local JSON file" onClick={() => setModal('storage')}>
-          <Icon name="help" size={19} />
-        </button>
-        <span class="profile-avatar" title="Personal workspace">
-          M
-        </span>
       </div>
     </header>
   )

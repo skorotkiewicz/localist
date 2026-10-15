@@ -34,7 +34,7 @@ export default function Sidebar({ mobileNav, status, category, counts, categorie
           <button key={key} class={`nav-item ${status === key && category === 'all' ? 'active' : ''}`} onClick={() => navigate(key)} aria-current={status === key && category === 'all' ? 'page' : undefined}>
             <Icon name={icon} />
             <span>{label}</span>
-            <span class="nav-count">{counts[key]}</span>
+            <span class="nav-count">{key === 'all' ? counts.all - counts.archived : counts[key]}</span>
           </button>
         ))}
       </nav>
@@ -49,7 +49,7 @@ export default function Sidebar({ mobileNav, status, category, counts, categorie
           <button class={`nav-item ${category === c ? 'category-active' : ''}`} key={c} onClick={() => onCategory(c)}>
             <span class="category-dot" />
             <span>{c}</span>
-            <span class="category-count">{projects.filter(p => p.category === c).length}</span>
+            <span class="category-count">{projects.filter(p => p.category === c && p.status !== 'archived').length}</span>
           </button>
         ))}
       </nav>

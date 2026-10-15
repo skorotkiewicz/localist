@@ -1,5 +1,3 @@
-import { useLayoutEffect, useRef } from 'preact/hooks'
-
 // import { useId, useLayoutEffect, useRef, useState } from 'preact/hooks'
 //
 // export default function ProjectDescription({ description, name }) {
@@ -40,25 +38,9 @@ import { useLayoutEffect, useRef } from 'preact/hooks'
 //   )
 // }
 
-export function fitDescription(element) {
-  if (element.open) return
-  const lineHeight = Number.parseFloat(getComputedStyle(element.firstElementChild).lineHeight)
-  // clientHeight rounds fractional CSS pixels, so allow half a pixel at the line boundary.
-  const lines = Math.max(1, Math.floor((element.clientHeight + 0.5) / lineHeight))
-  element.style.setProperty('--description-lines', String(lines))
-}
-
 export default function ProjectDescription({ description }) {
-  const ref = useRef()
-  useLayoutEffect(() => {
-    const element = ref.current
-    const observer = new ResizeObserver(() => fitDescription(element))
-    observer.observe(element)
-    fitDescription(element)
-    return () => observer.disconnect()
-  }, [description])
   return (
-    <details ref={ref} class="project-description">
+    <details class="project-description">
       <summary class="description-preview" title={description}>
         {description}
       </summary>

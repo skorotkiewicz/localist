@@ -187,3 +187,19 @@ test('showcase repository text is escaped and private repository entries stay pr
   assert.ok(!html.includes('PRIVATE_REPOSITORY'))
   assert.ok(!html.includes(project.path))
 })
+
+test('archived projects appear only in Archived, including with search and category filters', () => {
+  const completed = { ...project, id: 'completed', status: 'complete' }
+  const archived = { ...project, id: 'archived', status: 'archived' }
+  const projects = [project, completed, archived]
+  for (const options of [{}, { status: 'all' }, { category: project.category }, { query: project.name }, { visibility: 'public' }, { sort: 'created' }]) {
+    assert.deepEqual(filterProjects(projects, options), [project, completed])
+  }
+  assert.deepEqual(filterProjects(projects, { status: 'archived' }), [archived])
+  assert.deepEqual(filterProjects(projects, { status: 'archived', category: project.category, query: project.name }), [archived])
+  assert.deepEqual(filterProjects(projects, { status: 'progress' }), [project])
+  assert.deepEqual(filterProjects(projects, { status: 'complete' }), [completed])
+  assert.deepEqual(filterProjects([archived]), [])
+  assert.equal(projects.length, 3)
+  assert.equal(archived.status, 'archived')
+})

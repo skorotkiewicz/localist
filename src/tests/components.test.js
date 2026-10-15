@@ -8,7 +8,7 @@ function elements(node) {
   return [node, ...[node.props?.children].flat(Infinity).flatMap(elements)]
 }
 
-test('extracted card and sidebar keep their actions connected', async t => {
+test('extracted components keep their actions connected', async t => {
   const server = await createServer({
     configFile: false,
     plugins: [preact()],
@@ -18,7 +18,9 @@ test('extracted card and sidebar keep their actions connected', async t => {
   t.after(() => server.close())
   const { default: ProjectCard } = await server.ssrLoadModule('/src/componets/ProjectCard.jsx')
   const { default: Sidebar } = await server.ssrLoadModule('/src/componets/Sidebar.jsx')
-  const { default: ProjectDescription, fitDescription } = await server.ssrLoadModule('/src/componets/ProjectDescription.jsx')
+  const { default: WorkspaceHeader } = await server.ssrLoadModule('/src/componets/WorkspaceHeader.jsx')
+  const { default: StorageDialog } = await server.ssrLoadModule('/src/componets/StorageDialog.jsx')
+  const { default: ProjectDescription } = await server.ssrLoadModule('/src/componets/ProjectDescription.jsx')
   const project = {
     id: 'component-test',
     name: 'A project',
@@ -50,42 +52,11 @@ test('extracted card and sidebar keep their actions connected', async t => {
   })
   const description = elements(card).find(node => node.type === ProjectDescription)
   assert.deepEqual(description.props, { description: project.description })
-  const originalGetComputedStyle = globalThis.getComputedStyle
-  let lineHeight = '20px'
-  globalThis.getComputedStyle = () => ({ lineHeight })
-  try {
-    let lines
-    const preview = {
-      open: false,
-      clientHeight: 79,
-      firstElementChild: {},
-      style: {
-        setProperty: (name, value) => {
-          assert.equal(name, '--description-lines')
-          lines = value
-        }
-      }
-    }
-    fitDescription(preview)
-    assert.equal(lines, '3')
-    preview.clientHeight = 100
-    fitDescription(preview)
-    assert.equal(lines, '5')
-    preview.clientHeight = 10
-    fitDescription(preview)
-    assert.equal(lines, '1')
-    lineHeight = '19.2px'
-    preview.clientHeight = 38
-    fitDescription(preview)
-    assert.equal(lines, '2')
-    preview.open = true
-    preview.clientHeight = 300
-    fitDescription(preview)
-    assert.equal(lines, '2')
-  } finally {
-    if (originalGetComputedStyle) globalThis.getComputedStyle = originalGetComputedStyle
-    else Reflect.deleteProperty(globalThis, 'getComputedStyle')
-  }
+  const disclosure = ProjectDescription(description.props)
+  assert.equal(disclosure.type, 'details')
+  const preview = elements(disclosure).find(node => node.type === 'summary')
+  assert.equal(preview.props.title, project.description)
+  assert.equal(preview.props.children, project.description)
   const emptyCard = ProjectCard({ project: { ...project, description: '' } })
   assert.equal(
     elements(emptyCard).some(node => node.type === ProjectDescription),
@@ -117,9 +88,9 @@ test('extracted card and sidebar keep their actions connected', async t => {
     mobileNav: false,
     status: 'all',
     category: 'all',
-    counts: { all: 1, progress: 1, complete: 0, archived: 0 },
+    counts: { all: 2, progress: 1, complete: 0, archived: 1 },
     categories: ['Custom'],
-    projects: [project],
+    projects: [project, { ...project, id: 'archived', status: 'archived' }],
     saving: false,
     loaded: true,
     loadError: '',
@@ -132,6 +103,10 @@ test('extracted card and sidebar keep their actions connected', async t => {
     }
   })
   const categoryNav = elements(sidebar).find(node => node.props?.['aria-label'] === 'Project categories')
+  assert.equal(elements(categoryNav).find(node => node.props?.class === 'category-count').props.children, 1)
+  const statusNav = elements(sidebar).find(node => node.props?.['aria-label'] === 'Project status')
+  assert.equal(elements(statusNav).find(node => node.props?.class === 'nav-count').props.children, 1)
+
   elements(categoryNav)
     .find(node => node.type === 'button')
     .props.onClick()
@@ -140,6 +115,29 @@ test('extracted card and sidebar keep their actions connected', async t => {
   assert.equal(showcaseLinks.length, 1)
   showcaseLinks[0].props.onClick()
   assert.equal(selectedModal, 'showcase')
+  let mobileNav
+  const header = WorkspaceHeader({
+    status: 'all',
+    category: 'all',
+    setMobileNav: value => {
+      mobileNav = value
+    }
+  })
+  const headerNodes = elements(header)
+  assert.equal(headerNodes.find(node => node.type === 'strong').props.children, 'All projects')
+  headerNodes.find(node => node.props?.['aria-label'] === 'Open navigation').props.onClick()
+  assert.equal(mobileNav, true)
+  assert.equal(
+    headerNodes.some(node => /topbar-right|profile-avatar|help-button|local-badge/.test(node.props?.class ?? '')),
+    false
+  )
+  const messages = []
+  const storage = StorageDialog({ projects: [project], categories: [], loaded: false, notify: message => messages.push(message) })
+  const exportButton = elements(storage).find(node => node.type === 'button' && [node.props.children].flat().includes('Export projects.json'))
+  assert.ok(exportButton)
+  exportButton.props.onClick()
+  assert.deepEqual(messages, ['Load the JSON index before exporting.'])
+
   assert.equal(
     elements(sidebar).some(node => node.props?.class === 'share-card'),
     false
