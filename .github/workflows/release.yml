@@ -105,3 +105,67 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: gh release edit "$GITHUB_REF_NAME" --draft=false
+
+  aur-publish:
+    name: Build Arch package and publish to AUR
+    needs: publish
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:base-devel
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Install packaging tools and create builder
+        run: |
+          pacman -Syu --noconfirm --needed git openssh github-cli
+          useradd --create-home builder
+
+      - name: Download prebuilt Debian package and calculate SHA-256
+        working-directory: arch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          version=${GITHUB_REF_NAME#v}
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]
+          sed -i "s/^_version=.*/_version=$version/" PKGBUILD
+          gh release download "$GITHUB_REF_NAME" --pattern "localist_${version}_amd64.deb" --dir .
+          checksum=$(sha256sum "localist_${version}_amd64.deb" | cut -d ' ' -f1)
+          sed -i "s/^sha256sums=.*/sha256sums=('$checksum')/" PKGBUILD
+
+      - name: Build Arch package and generate .SRCINFO
+        working-directory: arch
+        run: |
+          chown -R builder:builder .
+          runuser -u builder -- bash -euo pipefail -c '
+            source PKGBUILD
+            [[ "${sha256sums[0]}" =~ ^[0-9a-f]{64}$ ]]
+            makepkg --nodeps --noconfirm
+            makepkg --printsrcinfo > .SRCINFO
+          '
+          bsdtar -tf ./*.pkg.tar.zst | grep -Ex '(\./)?usr/bin/localist'
+
+      - name: Upload Arch package and checksummed PKGBUILD
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release upload "$GITHUB_REF_NAME" arch/*.pkg.tar.zst arch/PKGBUILD --clobber
+
+      - name: Publish AUR package
+        uses: KSXGitHub/github-actions-deploy-aur@v4.1.2
+        with:
+          pkgname: localist-bin
+          pkgbuild: ./arch/PKGBUILD
+          assets: ./arch/.SRCINFO
+          commit_username: ${{ secrets.AUR_USERNAME }}
+          commit_email: ${{ secrets.AUR_EMAIL }}
+          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          commit_message: 'aur: ${{ github.ref_name }}'
+          ssh_keyscan_types: rsa,ecdsa,ed25519
