@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import preact from '@preact/preset-vite'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
+import appConfig from './src-tauri/tauri.conf.json' with { type: 'json' }
 const root = fileURLToPath(new URL('../', import.meta.url))
 const host = process.env.TAURI_DEV_HOST
 
@@ -10,6 +11,7 @@ export default defineConfig(() => ({
   root,
   cacheDir: fileURLToPath(new URL('./node_modules/.vite', import.meta.url)),
   plugins: [preact()],
+  define: { __APP_VERSION__: JSON.stringify(appConfig.version) },
   resolve: {
     alias: { '#platform': fileURLToPath(new URL('./platform.js', import.meta.url)) },
     dedupe: ['preact']

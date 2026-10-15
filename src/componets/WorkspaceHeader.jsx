@@ -1,3 +1,4 @@
+import { windowControls } from '#platform'
 import { STATUS_LABELS } from '../projects'
 import Icon from './Icon'
 
@@ -13,6 +14,7 @@ export default function WorkspaceHeader({ status, category, setMobileNav }) {
         <span class="slash">/</span>
         <strong>{category !== 'all' ? category : status === 'all' ? 'All projects' : STATUS_LABELS[status]}</strong>
       </div>
+      {!windowControls && <span class="app-version">v{__APP_VERSION__}</span>}
     </header>
   )
 }

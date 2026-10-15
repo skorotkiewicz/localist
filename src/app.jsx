@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
+import { windowControls } from '#platform'
 import { STATUS_LABELS, removeArchivedProject } from './projects'
 import Icon from './componets/Icon'
 import ProjectEditor from './componets/ProjectEditor'
 import { exportJSON, importJSON } from './helpers/json'
 import Sidebar from './componets/Sidebar'
 import WorkspaceHeader from './componets/WorkspaceHeader'
+import WindowTitlebar from './componets/WindowTitlebar'
 import ProjectList from './componets/ProjectList'
 import CategoryDialog from './componets/CategoryDialog'
 import StorageDialog from './componets/StorageDialog'
@@ -81,7 +83,8 @@ export function App() {
   }
 
   return (
-    <div class="workspace">
+    <div class={windowControls ? 'workspace desktop-workspace' : 'workspace'}>
+      {windowControls && <WindowTitlebar controls={windowControls} notify={notify} />}
       {mobileNav && <button class="nav-scrim" aria-label="Close navigation" onClick={() => setMobileNav(false)} />}
       <Sidebar
         mobileNav={mobileNav}
@@ -102,7 +105,7 @@ export function App() {
         }}
       />
       <div class="main-shell">
-        <WorkspaceHeader status={status} category={category} setMobileNav={setMobileNav} />
+        {/* <WorkspaceHeader status={status} category={category} setMobileNav={setMobileNav} />*/}
         <main>
           {loadError && (
             <div class="error-banner" role="alert">

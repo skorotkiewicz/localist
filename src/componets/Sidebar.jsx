@@ -11,18 +11,18 @@ export default function Sidebar({ mobileNav, status, category, counts, categorie
           navigate('all')
         }}
       >
-        <span class="brand-mark">
+        {/* <span class="brand-mark">
           <Icon name="folder" size={23} />
-        </span>
+        </span>*/}
         localist<span class="brand-dot">.</span>
       </a>
-      <div class="workspace-switch">
+      {/* <div class="workspace-switch">
         <span class="workspace-avatar">M</span>
         <div>
           My workspace<small>Personal space</small>
         </div>
         <Icon name="lock" size={15} />
-      </div>
+      </div>*/}
       <div class="nav-label">WORKSPACE</div>
       <nav class="main-nav" aria-label="Project status">
         {[

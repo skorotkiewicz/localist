@@ -10,10 +10,11 @@ const chromium = '/usr/lib/chromium/chromium'
 
 // Exercise native dialog layering without loading the project store.
 const html = `<!doctype html><link rel="stylesheet" href="/src/index.css"><link rel="stylesheet" href="/src/app.css">
-<div id="dialog-root"></div><div id="toast-root"></div><script type="module">
+<div id="dialog-root"></div><div id="toast-root"></div><div id="window-root"></div><script type="module">
 import { h, render } from 'preact'
 import Modal from '/src/componets/Modal.jsx'
 import Toast from '/src/componets/Toast.jsx'
+import WindowTitlebar from '/src/componets/WindowTitlebar.jsx'
 import CategoryDialog from '/src/componets/CategoryDialog.jsx'
 import { removeUnusedCategory } from '/src/projects.js'
 const root = document.getElementById('toast-root')
@@ -34,14 +35,46 @@ const checkClickable = () => {
   button.focus()
   check(document.activeElement === button, 'Dismiss button cannot receive keyboard focus')
 }
+const windowActions = []
+let failWindowAction = false
+render(h(WindowTitlebar, { controls: Object.fromEntries(['minimize', 'toggleMaximize', 'close'].map(action => [action, async () => {
+  if (failWindowAction) throw Error('Native window unavailable')
+  windowActions.push(action)
+}])), notify: show }), document.getElementById('window-root'))
+const checkWindowControls = () => {
+  const titlebarRect = document.querySelector('.window-titlebar').getBoundingClientRect()
+  check(titlebarRect.left === 0 && titlebarRect.top === 0 && titlebarRect.width === innerWidth, 'Title bar moved into the dialog layout')
+  const dragRegion = document.querySelector('[data-tauri-drag-region]')
+  const dragRect = dragRegion.getBoundingClientRect()
+  check(document.elementFromPoint(dragRect.x + 20, dragRect.y + 20) === dragRegion, 'Title text blocks native dragging')
+  const buttons = [...document.querySelectorAll('.window-controls button')]
+  check(buttons.length === 3, 'Window buttons are missing')
+  for (const button of buttons) {
+    const rect = button.getBoundingClientRect()
+    check(rect.width >= 44 && rect.height >= 44, 'Window target is too small')
+    check(button.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)), 'Window button is obscured or inert')
+    button.focus()
+    check(document.activeElement === button, 'Window button cannot receive keyboard focus')
+  }
+}
 let result = 'passed'
 try {
+  checkWindowControls()
+  document.querySelectorAll('.window-controls button').forEach(button => button.click())
+  await wait(() => windowActions.length === 3)
+  check(windowActions.join(',') === 'minimize,toggleMaximize,close', 'Window actions are wired incorrectly')
   show('Project index exported')
   await wait(() => document.querySelector('.toast'))
   checkClickable()
   render(h(Modal, { title: 'Storage', close: () => render(null, dialogRoot) }, h('button', {}, 'Export')), dialogRoot)
-  await wait(() => document.querySelector('dialog[open] .toast'))
+  await wait(() => document.querySelector('dialog[open] .toast') && document.querySelector('dialog[open] .window-titlebar'))
   checkClickable()
+  checkWindowControls()
+  failWindowAction = true
+  document.querySelector('.window-controls button').click()
+  await wait(() => document.querySelector('.toast-message')?.textContent === 'Could not minimize window: Native window unavailable')
+  checkClickable()
+  failWindowAction = false
   show('Export failed: ' + '/a-long-folder-name'.repeat(25))
   await wait(() => document.querySelector('.toast-message')?.textContent.startsWith('Export failed:'))
   checkClickable()
@@ -53,8 +86,9 @@ try {
   show('Imported projects')
   await wait(() => document.querySelector('dialog[open] .toast'))
   document.querySelector('dialog .modal-heading button').click()
-  await wait(() => document.querySelector('body > .toast') && !document.querySelector('dialog'))
+  await wait(() => document.querySelector('body > .toast') && document.querySelector('body > .window-titlebar') && !document.querySelector('dialog'))
   checkClickable()
+  checkWindowControls()
   const projects = [{ category: 'Active', status: 'progress' }, { category: 'Archived', status: 'archived' }]
   let categories = ['Unused', 'Active', 'Archived']
   let attempts = 0
@@ -101,9 +135,10 @@ output.textContent = result
 document.body.append(output)
 </script>`
 
-test('native dialogs keep notifications readable and category removal safe', { skip: !existsSync(chromium) }, async t => {
+test('native dialogs keep notifications and window controls usable and category removal safe', { skip: !existsSync(chromium) }, async t => {
   const server = await createServer({
     configFile: false,
+    define: { __APP_VERSION__: JSON.stringify('1.2.3-test') },
     plugins: [
       preact(),
       {

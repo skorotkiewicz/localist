@@ -11,6 +11,7 @@ function elements(node) {
 test('extracted components keep their actions connected', async t => {
   const server = await createServer({
     configFile: false,
+    define: { __APP_VERSION__: JSON.stringify('1.2.3-test') },
     plugins: [preact()],
     server: { middlewareMode: true },
     logLevel: 'silent'
@@ -162,6 +163,8 @@ test('extracted components keep their actions connected', async t => {
     }
   })
   const headerNodes = elements(header)
+  const version = headerNodes.find(node => node.props?.class === 'app-version')
+  assert.equal(version.props.children.join(''), 'v1.2.3-test')
   assert.equal(headerNodes.find(node => node.type === 'strong').props.children, 'All projects')
   headerNodes.find(node => node.props?.['aria-label'] === 'Open navigation').props.onClick()
   assert.equal(mobileNav, true)

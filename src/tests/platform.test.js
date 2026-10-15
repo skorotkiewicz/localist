@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { resolveConfig } from 'vite'
@@ -13,11 +13,18 @@ test('Node tests use the web adapter by default', () => {
   assert.equal(platform.loadIndex, web.loadIndex)
   assert.equal(platform.saveIndex, web.saveIndex)
   assert.equal(platform.download, web.download)
+  assert.equal(platform.windowControls, null)
 })
 
 test('both Vite builds share one frontend and select their own adapter', { skip: !existsSync(resolve(root, 'tauri/node_modules/vite')) }, async () => {
   const webConfig = await resolveConfig({ configFile: resolve(root, 'vite.config.js') }, 'build')
   const desktopConfig = await resolveConfig({ configFile: resolve(root, 'tauri/vite.config.js') }, 'build')
+  assert.equal(JSON.parse(webConfig.define.__APP_VERSION__), JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8')).version)
+  const desktopApp = JSON.parse(readFileSync(resolve(root, 'tauri/src-tauri/tauri.conf.json'), 'utf8'))
+  assert.equal(JSON.parse(desktopConfig.define.__APP_VERSION__), desktopApp.version)
+  assert.equal(desktopApp.app.windows[0].decorations, false)
+  const { permissions } = JSON.parse(readFileSync(resolve(root, 'tauri/src-tauri/capabilities/default.json'), 'utf8'))
+  for (const action of ['minimize', 'toggle-maximize', 'close', 'start-dragging']) assert.ok(permissions.includes(`core:window:allow-${action}`))
   assert.equal(resolve(webConfig.root), resolve(root))
   assert.equal(resolve(desktopConfig.root), resolve(root))
   assert.equal(desktopConfig.publicDir, webConfig.publicDir)
@@ -30,4 +37,5 @@ test('both Vite builds share one frontend and select their own adapter', { skip:
   assert.ok(desktopConfig.server.fs.deny.includes('**/data/**'))
   const desktop = await import('../../tauri/platform.js')
   assert.deepEqual(Object.keys(desktop).sort(), Object.keys(web).sort())
+  assert.deepEqual(Object.keys(desktop.windowControls).sort(), ['close', 'minimize', 'toggleMaximize'])
 })

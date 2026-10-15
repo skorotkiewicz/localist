@@ -1,3 +1,5 @@
+export const windowControls = null
+
 async function request(options) {
   const response = await fetch('/api/projects', options)
   const data = await response.json()
