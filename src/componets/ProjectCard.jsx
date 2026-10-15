@@ -2,7 +2,7 @@ import { STATUS_LABELS } from '../projects'
 import Icon from './Icon'
 import ProjectDescription from './ProjectDescription'
 
-export default function ProjectCard({ project: p, menu, setMenu, update, edit, copy, setCategory, setQuery }) {
+export default function ProjectCard({ project: p, menu, setMenu, update, edit, remove, copy, setCategory, setQuery }) {
   const repositories = p.repositories ?? []
   return (
     <article class={`project-card ${p.status === 'archived' ? 'archived-card' : ''}`}>
@@ -73,6 +73,12 @@ export default function ProjectCard({ project: p, menu, setMenu, update, edit, c
                   <Icon name="archive" size={15} />
                   {p.status === 'archived' ? 'Unarchive project' : 'Archive project'}
                 </button>
+                {p.status === 'archived' && (
+                  <button class="danger-action" onClick={() => remove(p)}>
+                    <Icon name="close" size={15} />
+                    Remove project
+                  </button>
+                )}
               </div>
             )}
           </div>

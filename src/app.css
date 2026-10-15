@@ -400,6 +400,18 @@ main {
   background: var(--green-dark);
   border-color: var(--green-dark);
 }
+.button.danger {
+  background: #9c3f34;
+  border-color: #9c3f34;
+  color: #fff;
+}
+.button.danger:hover {
+  background: #843327;
+  border-color: #843327;
+}
+.removal-warning {
+  overflow-wrap: anywhere;
+}
 .stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -711,6 +723,12 @@ main {
 }
 .dropdown button:hover {
   background: #edf2e7;
+}
+.dropdown .danger-action {
+  color: #9c3f34;
+}
+.dropdown .danger-action:hover {
+  background: #faeeeb;
 }
 .project-info {
   padding: 14px 19px 18px;

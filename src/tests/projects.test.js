@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { filterProjects, generateShowcase, validateIndex, validateProjects } from '../projects.js'
+import { filterProjects, generateShowcase, removeArchivedProject, validateIndex, validateProjects } from '../projects.js'
 import { exportJSON, importJSON } from '../helpers/json.js'
 
 const project = {
@@ -202,4 +202,17 @@ test('archived projects appear only in Archived, including with search and categ
   assert.deepEqual(filterProjects([archived]), [])
   assert.equal(projects.length, 3)
   assert.equal(archived.status, 'archived')
+})
+
+test('removal only deletes the selected archived entry and leaves other records intact', () => {
+  const completed = { ...project, id: 'completed', status: 'complete' }
+  const archived = { ...project, id: 'archived', status: 'archived' }
+  const otherArchive = { ...project, id: 'another-archive', status: 'archived' }
+  const projects = [project, completed, archived, otherArchive]
+  assert.deepEqual(removeArchivedProject(projects, archived.id), [project, completed, otherArchive])
+  for (const id of [project.id, completed.id, 'missing']) {
+    assert.deepEqual(removeArchivedProject(projects, id), projects)
+  }
+  assert.deepEqual(projects, [project, completed, archived, otherArchive])
+  assert.deepEqual(removeArchivedProject([], archived.id), [])
 })

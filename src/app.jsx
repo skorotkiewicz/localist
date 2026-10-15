@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
-import { STATUS_LABELS } from './projects'
+import { STATUS_LABELS, removeArchivedProject } from './projects'
 import Icon from './componets/Icon'
 import ProjectEditor from './componets/ProjectEditor'
 import { exportJSON, importJSON } from './helpers/json'
@@ -49,6 +49,14 @@ export function App() {
 
   async function update(project, changes) {
     if (await persist(projects.map(p => (p.id === project.id ? { ...p, ...changes, updatedAt: new Date().toISOString() } : p)))) notify('Project updated')
+  }
+
+  async function remove(project) {
+    const next = removeArchivedProject(projects, project.id)
+    if (next.length === projects.length) return false
+    if (!(await persist(next))) return false
+    notify('Project removed')
+    return true
   }
 
   function navigate(next) {
@@ -109,7 +117,6 @@ export function App() {
               <p>A home for everything you’re building, and everything you’ll come back to.</p>
             </div>
             <div class="heading-actions">
-
               <button class="button export-button" onClick={() => exportJSON({ loaded, projects, categories, notify })}>
                 <Icon name="download" size={16} />
                 Export JSON
@@ -140,7 +147,20 @@ export function App() {
               </button>
             ))}
           </section>
-          <ProjectList projects={projects} categories={categories} loaded={loaded} loadError={loadError} status={status} category={category} setCategory={setCategory} searchRef={searchRef} copy={copy} onEdit={edit} onUpdate={update} />
+          <ProjectList
+            projects={projects}
+            categories={categories}
+            loaded={loaded}
+            loadError={loadError}
+            status={status}
+            category={category}
+            setCategory={setCategory}
+            searchRef={searchRef}
+            copy={copy}
+            onEdit={edit}
+            onUpdate={update}
+            onRemove={remove}
+          />
           {/* <section class="showcase-banner">
             <div class="banner-icon">
               <Icon name="globe" size={24} />

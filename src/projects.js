@@ -77,6 +77,10 @@ export function filterProjects(projects, { status = 'all', category = 'all', que
     })
 }
 
+export function removeArchivedProject(projects, id) {
+  return projects.filter(p => p.id !== id || p.status !== 'archived')
+}
+
 const escapeHTML = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
 
 export function generateShowcase(projects, title = 'Things I’m building') {

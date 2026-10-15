@@ -21,6 +21,7 @@ test('extracted components keep their actions connected', async t => {
   const { default: WorkspaceHeader } = await server.ssrLoadModule('/src/componets/WorkspaceHeader.jsx')
   const { default: StorageDialog } = await server.ssrLoadModule('/src/componets/StorageDialog.jsx')
   const { default: ProjectDescription } = await server.ssrLoadModule('/src/componets/ProjectDescription.jsx')
+  const { default: RemoveProjectDialog } = await server.ssrLoadModule('/src/componets/RemoveProjectDialog.jsx')
   const project = {
     id: 'component-test',
     name: 'A project',
@@ -81,6 +82,39 @@ test('extracted components keep their actions connected', async t => {
   buttons.find(node => node.props.class?.includes('status-badge')).props.onClick()
   buttons.find(node => [node.props.children].flat().includes('Archive project')).props.onClick()
   assert.deepEqual(changes, [{ public: true }, { status: 'complete' }, { status: 'archived' }])
+  const removeButton = tree => elements(tree).find(node => node.type === 'button' && [node.props.children].flat().includes('Remove project'))
+  assert.equal(removeButton(card), undefined)
+  assert.equal(removeButton(ProjectCard({ project: { ...project, status: 'complete' }, menu: project.id })), undefined)
+  const archived = { ...project, status: 'archived' }
+  let requestedRemoval
+  const archivedCard = ProjectCard({
+    project: archived,
+    menu: archived.id,
+    remove: selected => {
+      requestedRemoval = selected
+    }
+  })
+  removeButton(archivedCard).props.onClick()
+  assert.equal(requestedRemoval, archived)
+  let removals = 0
+  let cancellations = 0
+  const removalDialog = RemoveProjectDialog({
+    project: archived,
+    close: () => {
+      cancellations++
+    },
+    remove: () => {
+      removals++
+    }
+  })
+  const cancel = elements(removalDialog).find(node => node.type === 'button' && [node.props.children].flat().includes('Cancel'))
+  assert.equal(cancel.props.autoFocus, true)
+  assert.equal(removals, 0)
+  cancel.props.onClick()
+  assert.equal(cancellations, 1)
+  assert.equal(removals, 0)
+  removeButton(removalDialog).props.onClick()
+  assert.equal(removals, 1)
 
   let selectedCategory
   let selectedModal

@@ -2,12 +2,14 @@ import { useEffect, useState } from 'preact/hooks'
 import { STATUS_LABELS, filterProjects } from '../projects'
 import Icon from './Icon'
 import ProjectCard from './ProjectCard'
+import RemoveProjectDialog from './RemoveProjectDialog'
 
-export default function ProjectList({ projects, categories, loaded, loadError, status, category, setCategory, searchRef, copy, onEdit, onUpdate }) {
+export default function ProjectList({ projects, categories, loaded, loadError, status, category, setCategory, searchRef, copy, onEdit, onUpdate, onRemove }) {
   const [query, setQuery] = useState('')
   const [visibility, setVisibility] = useState('all')
   const [sort, setSort] = useState('updated')
   const [menu, setMenu] = useState(null)
+  const [removing, setRemoving] = useState(null)
   const filtered = filterProjects(projects, { status, category, query, visibility, sort })
 
   useEffect(() => {
@@ -81,7 +83,21 @@ export default function ProjectList({ projects, categories, loaded, loadError, s
       </div>
       <div class="project-grid list-view">
         {filtered.map(p => (
-          <ProjectCard key={p.id} project={p} menu={menu} setMenu={setMenu} update={update} edit={edit} copy={copy} setCategory={setCategory} setQuery={setQuery} />
+          <ProjectCard
+            key={p.id}
+            project={p}
+            menu={menu}
+            setMenu={setMenu}
+            update={update}
+            edit={edit}
+            remove={project => {
+              setMenu(null)
+              setRemoving(project)
+            }}
+            copy={copy}
+            setCategory={setCategory}
+            setQuery={setQuery}
+          />
         ))}
       </div>
       {!filtered.length && !loaded && !loadError && (
@@ -118,6 +134,15 @@ export default function ProjectList({ projects, categories, loaded, loadError, s
           Just you, your projects, and a little clarity.
         </span>
       </footer>
+      {removing && (
+        <RemoveProjectDialog
+          project={removing}
+          close={() => setRemoving(null)}
+          remove={async () => {
+            if (await onRemove(removing)) setRemoving(null)
+          }}
+        />
+      )}
     </section>
   )
 }
