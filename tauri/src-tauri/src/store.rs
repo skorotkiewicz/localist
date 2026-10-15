@@ -25,9 +25,8 @@ struct Project {
     status: String,
     public: bool,
     tags: Vec<String>,
-    #[serde(default)]
     repositories: Vec<String>,
-    created_at: Option<String>,
+    created_at: String,
     updated_at: String,
     #[serde(default = "folder_icon")]
     icon: String,
@@ -55,7 +54,7 @@ impl Index {
             return Err("Invalid project index or categories.".into());
         }
         let mut ids = HashSet::new();
-        for p in &mut self.projects {
+        for p in &self.projects {
             if p.id.is_empty()
                 || !ids.insert(&p.id)
                 || [&p.name, &p.path, &p.category]
@@ -68,11 +67,10 @@ impl Index {
                 || p.tags.len() > 30
                 || p.tags.iter().any(|s| !fits(s, 100))
                 || !valid_date(&p.updated_at)
-                || p.created_at.as_ref().is_some_and(|date| !valid_date(date))
+                || !valid_date(&p.created_at)
             {
                 return Err("Invalid project data. Check IDs, names, paths, categories, statuses, tags, and dates.".into());
             }
-            p.created_at.get_or_insert_with(|| p.updated_at.clone());
         }
         let mut categories = HashSet::new();
         self.categories.retain_mut(|category| {
@@ -132,7 +130,8 @@ mod tests {
         serde_json::from_value(json!({"projects": [{
             "id": "test", "name": "Test", "path": "/private/project", "description": "",
             "category": "Custom", "status": "archived", "public": false, "tags": [],
-            "repositories": ["not a URL", "private repository"], "updatedAt": "2026-05-01T00:00:00Z"
+            "repositories": ["not a URL", "private repository"],
+            "createdAt": "2026-04-01T00:00:00Z", "updatedAt": "2026-05-01T00:00:00Z"
         }], "categories": ["Custom"]}))
         .unwrap()
     }
@@ -148,10 +147,8 @@ mod tests {
             reloaded.projects[0].repositories,
             ["not a URL", "private repository"]
         );
-        assert_eq!(
-            reloaded.projects[0].created_at.as_deref(),
-            Some("2026-05-01T00:00:00Z")
-        );
+        assert_eq!(reloaded.projects[0].created_at, "2026-04-01T00:00:00Z");
+        assert_eq!(reloaded.projects[0].icon, "folder");
         assert_eq!(reloaded.categories, ["Custom"]);
         save(
             &file,

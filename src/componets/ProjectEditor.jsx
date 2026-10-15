@@ -17,7 +17,7 @@ const emptyProject = {
 function ProjectEditor({ project, categories, save, close }) {
   const [draft, setDraft] = useState(project || emptyProject)
   const [tagText, setTagText] = useState(project?.tags.join(', ') || '')
-  const [repositoryText, setRepositoryText] = useState(project?.repositories?.join('\n') || '')
+  const [repositoryText, setRepositoryText] = useState(project?.repositories.join('\n') || '')
   const field = (key, value) => setDraft({ ...draft, [key]: value })
   return (
     <Modal title={project ? 'Edit project' : 'A new place to start.'} subtitle="Keep the details here. Pick up where you left off." close={close}>
@@ -38,7 +38,7 @@ function ProjectEditor({ project, categories, save, close }) {
             path: draft.path.trim(),
             category: draft.category.trim(),
             id: draft.id || crypto.randomUUID(),
-            createdAt: draft.createdAt ?? draft.updatedAt ?? now,
+            createdAt: project ? project.createdAt : now,
             updatedAt: now
           })
         }}

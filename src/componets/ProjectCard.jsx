@@ -3,7 +3,7 @@ import Icon from './Icon'
 import ProjectDescription from './ProjectDescription'
 
 export default function ProjectCard({ project: p, menu, setMenu, update, edit, remove, copy, setCategory, setQuery }) {
-  const repositories = p.repositories ?? []
+  const repositories = p.repositories
   return (
     <article class={`project-card ${p.status === 'archived' ? 'archived-card' : ''}`}>
       <div class="card-top">

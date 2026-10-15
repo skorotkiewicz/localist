@@ -90,6 +90,7 @@ test('the JSON store preserves creation dates and repository entries across edit
     tags: [],
     status: 'progress',
     public: false,
+    icon: 'folder',
     createdAt: '2026-05-01T00:00:00Z',
     updatedAt: '2026-05-01T00:00:00Z'
   }

@@ -22,7 +22,8 @@ test('extracted JSON helpers receive their dependencies explicitly', async () =>
   const messages = []
   exportJSON({ loaded: false, projects: [], categories: [], notify: m => messages.push(m) })
   assert.deepEqual(messages, ['Load the JSON index before exporting.'])
-  const e = { target: { value: 'projects.json', files: [{ size: 2, text: async () => '[]' }] } }
+  const content = JSON.stringify({ projects: [], categories: [] })
+  const e = { target: { value: 'projects.json', files: [{ size: content.length, text: async () => content }] } }
   await importJSON(e, {
     projects: [project],
     categories: ['Custom'],
@@ -43,7 +44,8 @@ test('a new index has no projects or preset categories', () => {
     projects: [],
     categories: []
   })
-  assert.deepEqual(validateIndex([]), { projects: [], categories: [] })
+  assert.throws(() => validateIndex([]))
+  assert.throws(() => validateIndex([project]))
 })
 
 test('custom categories survive JSON export and import, even without projects', () => {
@@ -133,20 +135,25 @@ test('creation sorting is newest first while last updated remains the default', 
   )
 })
 
-test('legacy projects gain a stable creation-date fallback and invalid creation dates are rejected', () => {
-  const legacy = { ...project }
-  delete legacy.createdAt
-  const migrated = validateProjects([legacy])[0]
-  assert.equal(migrated.createdAt, legacy.updatedAt)
-  assert.equal(validateProjects([{ ...migrated, updatedAt: '2026-06-01T00:00:00Z' }])[0].createdAt, legacy.updatedAt)
+test('project fields are required and invalid creation dates are rejected', () => {
+  for (const field of ['createdAt', 'repositories']) {
+    const incomplete = { ...project }
+    delete incomplete[field]
+    assert.throws(() => validateProjects([incomplete]))
+  }
   for (const createdAt of [null, 123, '', 'not-a-date']) {
     assert.throws(() => validateProjects([{ ...project, createdAt }]))
   }
-  const newerLegacy = { ...legacy, id: 'newer-legacy', updatedAt: '2026-06-01T00:00:00Z' }
-  assert.deepEqual(
-    filterProjects([legacy, newerLegacy], { sort: 'created' }).map(p => p.id),
-    ['newer-legacy', legacy.id]
-  )
+  for (const repositories of [null, 'repository', [123]]) {
+    assert.throws(() => validateProjects([{ ...project, repositories }]))
+  }
+  for (const icon of [null, 123]) {
+    assert.throws(() => validateProjects([{ ...project, icon }]))
+  }
+  const withoutIcon = { ...project }
+  delete withoutIcon.icon
+  assert.equal(validateProjects([withoutIcon])[0].icon, 'folder')
+  assert.equal(validateProjects([{ ...project, icon: 'terminal' }])[0].icon, 'terminal')
 })
 
 test('creation dates sort by time across time zones and keep ties stable', () => {
@@ -166,9 +173,6 @@ test('repository entries accept arbitrary text and survive JSON round trips', ()
   const repositories = ['https://github.com/user/project', 'https://git.example.com/user/project', 'not a valid URL', 'git@server:repo', '  leave these spaces  ', 'javascript:alert(1)']
   const index = { projects: [{ ...project, repositories }], categories: [] }
   assert.deepEqual(validateIndex(JSON.parse(JSON.stringify(index))), index)
-  const legacy = { ...project }
-  delete legacy.repositories
-  assert.deepEqual(validateProjects([legacy])[0].repositories, [])
   assert.equal(filterProjects(index.projects, { query: 'git.example.com' }).length, 1)
   assert.equal(filterProjects(index.projects, { query: 'not a valid URL' }).length, 1)
 })
