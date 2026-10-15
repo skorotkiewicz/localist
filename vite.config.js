@@ -16,5 +16,6 @@ const localIndex = {
 
 export default defineConfig({
   plugins: [preact(), localIndex],
-  server: { fs: { deny: ['.env', '.env.*', '*.{crt,pem}', '**/.git/**', '**/data/**'] } }
+  resolve: { alias: { '#platform': fileURLToPath(new URL('./platform/web.js', import.meta.url)) } },
+  server: { fs: { deny: ['.env', '.env.*', '*.{crt,pem}', '**/.git/**', '**/data/**', '**/frontend-backup/**'] } }
 })

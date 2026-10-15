@@ -41,9 +41,13 @@ export default function ShowcaseDialog({ open, projects, notify, copy, close }) 
         </span>
         <button
           class="button primary"
-          onClick={() => {
-            download(html, 'showcase.html', 'text/html')
-            notify('Your public showcase is ready')
+          onClick={async () => {
+            try {
+              const path = await download(html, 'showcase.html', 'text/html')
+              notify(path ? `Public showcase exported to ${path}` : 'Public showcase download started')
+            } catch (error) {
+              notify(`Export failed: ${error.message || String(error)}`)
+            }
           }}
         >
           <Icon name="download" size={16} />

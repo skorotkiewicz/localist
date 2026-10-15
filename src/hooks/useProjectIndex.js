@@ -1,3 +1,4 @@
+import { loadIndex, saveIndex } from '#platform'
 import { useEffect, useRef, useState } from 'preact/hooks'
 import { STATUS_LABELS, removeUnusedCategory, validateIndex } from '../projects'
 
@@ -16,22 +17,24 @@ export default function useProjectIndex(notify) {
 
   useEffect(() => {
     const controller = new AbortController()
+    let cancelled = false
 
     async function load() {
       try {
-        const response = await fetch('/api/projects', { signal: controller.signal })
-        const data = await response.json()
-        if (!response.ok) throw new Error(data.error || 'Could not load the project index.')
-        const index = validateIndex(data)
+        const index = validateIndex(await loadIndex(controller.signal))
+        if (cancelled) return
         setProjects(index.projects)
         setExtraCategories(index.categories)
         setLoaded(true)
       } catch (error) {
-        if (error.name !== 'AbortError') setLoadError(error.message || 'Could not load data/projects.json. Is the local server running?')
+        if (!cancelled) setLoadError(error.message || String(error) || 'Could not load projects.json.')
       }
     }
     load()
-    return () => controller.abort()
+    return () => {
+      cancelled = true
+      controller.abort()
+    }
   }, [])
 
   async function persist(next, nextCategories = extraCategories) {
@@ -46,19 +49,13 @@ export default function useProjectIndex(notify) {
     savingRef.current = true
     setSaving(true)
     try {
-      const response = await fetch('/api/projects', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projects: next, categories: nextCategories })
-      })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error || 'Could not save the index.')
+      const data = await saveIndex(validateIndex({ projects: next, categories: nextCategories }))
       const index = validateIndex(data)
       setProjects(index.projects)
       setExtraCategories(index.categories)
       return true
     } catch (error) {
-      notify(error.message || 'Save failed. Check that the local server is running.')
+      notify(error.message || String(error) || 'Could not save projects.json.')
       return false
     } finally {
       savingRef.current = false

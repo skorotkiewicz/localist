@@ -6,7 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!!electrobun/**", "!!projects-index/**"]
+    "includes": ["**", "!!projects-index/**", "!!tauri/frontend-backup/**"]
   },
   "formatter": {
     "enabled": true,

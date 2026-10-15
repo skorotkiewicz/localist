@@ -1,21 +1,19 @@
+import { download } from '#platform'
 import { validateIndex } from '../projects.js'
 
-export function download(content, name, type) {
-  const url = URL.createObjectURL(new Blob([content], { type }))
-  const a = document.createElement('a')
-  a.href = url
-  a.download = name
-  a.click()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
-}
+export { download }
 
-export function exportJSON({ loaded, projects, categories, notify }) {
+export async function exportJSON({ loaded, projects, categories, notify }) {
   if (!loaded) {
     notify('Load the JSON index before exporting.')
     return
   }
-  download(JSON.stringify({ projects, categories }, null, 2), 'projects.json', 'application/json')
-  notify('Project index exported')
+  try {
+    const path = await download(JSON.stringify({ projects, categories }, null, 2), 'projects.json', 'application/json')
+    notify(path ? `Project index exported to ${path}` : 'Project index download started')
+  } catch (error) {
+    notify(`Export failed: ${error.message || String(error)}`)
+  }
 }
 
 export async function importJSON(e, { projects, categories, persist, notify, setModal }) {

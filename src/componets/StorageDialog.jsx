@@ -9,12 +9,12 @@ export default function StorageDialog({ projects, categories, loaded, notify, im
         <Icon name="storage" size={30} />
         <div>
           <strong>{projects.length} projects, one simple JSON file.</strong>
-          <p>Changes are saved automatically to data/projects.json. Export a backup or import an existing index. Import merges projects by ID without removing other projects.</p>
+          <p>Saved changes are written to your local projects.json file. Export a backup or import an existing index. Import merges projects by ID without removing other projects.</p>
         </div>
       </div>
       <div class="notice">
         <Icon name="lock" size={18} />
-        <p>Your data is not stored in the browser. Keep the local server running while editing. JSON backups include private projects and local paths.</p>
+        <p>Your index is stored on this computer, not in browser storage. JSON backups include private projects and local paths.</p>
       </div>
       <div class="storage-actions">
         <button class="button" onClick={() => importRef.current.click()}>
