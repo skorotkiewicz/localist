@@ -156,7 +156,7 @@
     font-size: 12px;
   }
 }
-.category-dot {
+/*.category-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
@@ -178,7 +178,7 @@
   &.other {
     background: #b1b1a9;
   }
-}
+}*/
 .category-count {
   font-size: 11px;
   color: #8b9284;
@@ -960,7 +960,7 @@ details.project-description {
     background: #e5ebdc;
     color: #61764f;
   }
-  &.language-tag {
+  /*&.language-tag {
     background: #f9f0e8;
     color: #b58b70;
     border-color: #f1e5d9;
@@ -990,7 +990,7 @@ details.project-description {
       color: #8b9479;
       border-color: #e5e8de;
     }
-  }
+  }*/
   .list-view & {
     min-width: 0;
     overflow: hidden;
