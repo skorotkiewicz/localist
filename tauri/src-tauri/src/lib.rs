@@ -1,5 +1,7 @@
 mod exports;
 mod store;
+#[cfg(desktop)]
+mod tray;
 
 use std::{path::PathBuf, sync::Mutex};
 use tauri::{Manager, State};
@@ -30,6 +32,8 @@ pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
             app.manage(Mutex::new(app.path().app_data_dir()?.join("projects.json")));
+            #[cfg(desktop)]
+            tray::setup(app)?;
             Ok(())
         })
         .plugin(tauri_plugin_opener::init())
