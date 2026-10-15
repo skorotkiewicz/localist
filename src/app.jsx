@@ -8,6 +8,7 @@ import WorkspaceHeader from './componets/WorkspaceHeader'
 import ProjectList from './componets/ProjectList'
 import CategoryDialog from './componets/CategoryDialog'
 import StorageDialog from './componets/StorageDialog'
+import Toast from './componets/Toast'
 import ShowcaseDialog from './componets/ShowcaseDialog'
 import useProjectIndex from './hooks/useProjectIndex'
 import './app.css'
@@ -207,17 +208,7 @@ export function App() {
       />
       {modal === 'storage' && <StorageDialog projects={projects} categories={categories} loaded={loaded} notify={notify} importRef={importRef} close={() => setModal(null)} />}
       <ShowcaseDialog open={modal === 'showcase'} projects={projects} notify={notify} copy={copy} close={() => setModal(null)} />
-      {toast && (
-        <div class="toast" role="status">
-          <span>
-            <Icon name="check" size={16} />
-          </span>
-          {toast}
-          <button class="icon-button" aria-label="Dismiss notification" onClick={() => setToast('')}>
-            <Icon name="close" size={15} />
-          </button>
-        </div>
-      )}
+      {toast && <Toast message={toast} dismiss={() => setToast('')} />}
     </div>
   )
 }

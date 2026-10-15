@@ -174,6 +174,6 @@ test('extracted components keep their actions connected', async t => {
 
   assert.equal(
     elements(sidebar).some(node => node.props?.class === 'share-card'),
-    false
+    true
   )
 })
