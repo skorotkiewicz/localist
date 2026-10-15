@@ -139,7 +139,7 @@ export function App() {
             ))}
           </section>
           <ProjectList projects={projects} categories={categories} loaded={loaded} loadError={loadError} status={status} category={category} setCategory={setCategory} searchRef={searchRef} copy={copy} onEdit={edit} onUpdate={update} />
-          <section class="showcase-banner">
+          {/* <section class="showcase-banner">
             <div class="banner-icon">
               <Icon name="globe" size={24} />
               <span class="mini-spark">
@@ -154,7 +154,7 @@ export function App() {
               Build your showcase
               <Icon name="arrow" size={16} />
             </button>
-          </section>
+          </section>*/}
           <div class="page-footer">
             <span>A little less scattered. A little more built.</span>
             <span>

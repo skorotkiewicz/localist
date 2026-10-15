@@ -1,7 +1,9 @@
 import { STATUS_LABELS } from '../projects'
 import Icon from './Icon'
+import ProjectDescription from './ProjectDescription'
 
 export default function ProjectCard({ project: p, menu, setMenu, update, edit, copy, setCategory, setQuery }) {
+  const repositories = p.repositories ?? []
   return (
     <article class={`project-card ${p.status === 'archived' ? 'archived-card' : ''}`}>
       <div class="card-top">
@@ -37,6 +39,20 @@ export default function ProjectCard({ project: p, menu, setMenu, update, edit, c
                   <Icon name="copy" size={15} />
                   Copy path
                 </button>
+                {repositories.map((repository, index) => (
+                  <button
+                    class="repository-copy"
+                    key={index}
+                    title={`Copy repository: ${repository}`}
+                    onClick={() => {
+                      copy(repository, 'Repository URL copied')
+                      setMenu(null)
+                    }}
+                  >
+                    <Icon name="copy" size={15} />
+                    <span>{repository}</span>
+                  </button>
+                ))}
                 <button
                   onClick={() =>
                     update(p, {
@@ -64,21 +80,32 @@ export default function ProjectCard({ project: p, menu, setMenu, update, edit, c
       </div>
       <div class="project-info">
         <h3>
-          <button onClick={() => edit(p)}>{p.name}</button>
+          <button title={p.name} onClick={() => edit(p)}>
+            {p.name}
+          </button>
         </h3>
-        <button class="path-button" title="Copy project path" onClick={() => copy(p.path, 'Project path copied')}>
-          <Icon name="folder" size={12} />
-          <span>{p.path}</span>
-          <Icon name="copy" size={12} class="copy-icon" />
-        </button>
-        <p class="project-description">{p.description || 'A new idea, waiting to take shape.'}</p>
+        <div class="project-paths">
+          <button class="path-button" title="Copy project path" onClick={() => copy(p.path, 'Project path copied')}>
+            <Icon name="folder" size={12} />
+            <span>{p.path}</span>
+            <Icon name="copy" size={12} class="copy-icon" />
+          </button>
+          {repositories.length > 0 && (
+            <button class="path-button card-menu repository-trigger" title={repositories.join('\n')} aria-label={`Repository URLs for ${p.name}`} aria-expanded={menu === p.id} onClick={() => setMenu(menu === p.id ? null : p.id)}>
+              <Icon name="code" size={12} />
+              <span>{repositories.length}</span>
+            </button>
+          )}
+        </div>
+        {p.description && <ProjectDescription description={p.description} />}
+        {/* {p.description ? <ProjectDescription description={p.description} /> : <p class="project-description">A new idea, waiting to take shape.</p> }*/}
         <div class="tags">
-          <button class="tag language-tag other" onClick={() => setCategory(p.category)}>
+          <button class="tag language-tag other" title={p.category} onClick={() => setCategory(p.category)}>
             <span />
             {p.category}
           </button>
           {p.tags.slice(0, 2).map(t => (
-            <button class="tag" key={t} onClick={() => setQuery(t)}>
+            <button class="tag" key={t} title={t} onClick={() => setQuery(t)}>
               {t}
             </button>
           ))}

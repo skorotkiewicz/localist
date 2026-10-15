@@ -17,15 +17,18 @@ const emptyProject = {
 function ProjectEditor({ project, categories, save, close }) {
   const [draft, setDraft] = useState(project || emptyProject)
   const [tagText, setTagText] = useState(project?.tags.join(', ') || '')
+  const [repositoryText, setRepositoryText] = useState(project?.repositories?.join('\n') || '')
   const field = (key, value) => setDraft({ ...draft, [key]: value })
   return (
     <Modal title={project ? 'Edit project' : 'A new place to start.'} subtitle="Keep the details here. Pick up where you left off." close={close}>
       <form
+        class="project-editor-form"
         onSubmit={e => {
           e.preventDefault()
           const now = new Date().toISOString()
           save({
             ...draft,
+            repositories: repositoryText.split('\n').filter(Boolean),
             tags: tagText
               .split(',')
               .map(t => t.trim().slice(0, 100))
@@ -48,6 +51,11 @@ function ProjectEditor({ project, categories, save, close }) {
           Local path
           <input required maxLength={500} value={draft.path} onInput={e => field('path', e.target.value)} placeholder="~/Dev/Rust/my-project" class="mono" />
           <small>A reference to your folder. Localist does not access your files.</small>
+        </label>
+        <label>
+          Repository URLs
+          <textarea rows="2" value={repositoryText} onInput={e => setRepositoryText(e.target.value)} placeholder={'https://github.com/you/project\nhttps://git.example.com/you/project'} class="mono" />
+          <small>Optional. One per line. Stored as entered, without URL checks.</small>
         </label>
         <label>
           Description

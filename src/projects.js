@@ -23,6 +23,7 @@ export function validateProjects(value) {
       !Array.isArray(p.tags) ||
       p.tags.length > 30 ||
       !p.tags.every(t => typeof t === 'string' && t.length <= 100) ||
+      (p.repositories !== undefined && (!Array.isArray(p.repositories) || !p.repositories.every(repository => typeof repository === 'string'))) ||
       typeof p.updatedAt !== 'string' ||
       !Number.isFinite(Date.parse(p.updatedAt)) ||
       (p.createdAt !== undefined && (typeof p.createdAt !== 'string' || !Number.isFinite(Date.parse(p.createdAt))))
@@ -37,6 +38,7 @@ export function validateProjects(value) {
       description: p.description,
       category: p.category,
       tags: p.tags,
+      repositories: p.repositories ?? [],
       status: p.status,
       public: p.public,
       // shortcut: legacy indexes lack creation dates; use the last update until original dates are recovered.
@@ -62,7 +64,11 @@ export function filterProjects(projects, { status = 'all', category = 'all', que
   const needle = query.toLowerCase().trim()
   return projects
     .filter(
-      p => (status === 'all' || p.status === status) && (category === 'all' || p.category === category) && (visibility === 'all' || p.public) && [p.name, p.path, p.description, p.category, ...p.tags].join(' ').toLowerCase().includes(needle)
+      p =>
+        (status === 'all' || p.status === status) &&
+        (category === 'all' || p.category === category) &&
+        (visibility === 'all' || p.public) &&
+        [p.name, p.path, p.description, p.category, ...p.tags, ...(p.repositories ?? [])].join(' ').toLowerCase().includes(needle)
     )
     .sort((a, b) => {
       if (sort === 'name') return a.name.localeCompare(b.name)
@@ -78,8 +84,8 @@ export function generateShowcase(projects, title = 'Things I’m building') {
     .filter(p => p.public)
     .map(
       p =>
-        `<article><div class="meta">${escapeHTML(p.category)} <span>${STATUS_LABELS[p.status]}</span></div><h2>${escapeHTML(p.name)}</h2><p>${escapeHTML(p.description)}</p><div class="tags">${p.tags.map(t => `<small>${escapeHTML(t)}</small>`).join('')}</div></article>`
+        `<article><div class="meta">${escapeHTML(p.category)} <span>${STATUS_LABELS[p.status]}</span></div><h2>${escapeHTML(p.name)}</h2><p>${escapeHTML(p.description)}</p><div class="tags">${p.tags.map(t => `<small>${escapeHTML(t)}</small>`).join('')}</div>${p.repositories?.length ? `<div class="repositories">${p.repositories.map(repository => `<div>${escapeHTML(repository)}</div>`).join('')}</div>` : ''}</article>`
     )
     .join('')
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHTML(title)}</title><style>*{box-sizing:border-box}body{font:15px/1.6 system-ui,sans-serif;color:#283b32;background:#fafbf8;margin:0;padding:32px}main{max-width:1000px;margin:auto}h1{font-size:28px;letter-spacing:-1px}header p{color:#69716b}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:16px}article{padding:24px;background:white;border:1px solid #e1e6de;border-radius:12px}h2{font-size:19px;margin:14px 0 8px}article p{color:#626960;min-height:48px}.meta{font-size:12px;color:#477656;display:flex;justify-content:space-between;gap:12px}.meta span{color:#69716b}.tags{display:flex;gap:6px;flex-wrap:wrap}small{background:#f2f4ee;border-radius:4px;padding:2px 7px}footer{margin-top:24px;font-size:12px;color:#69716b}</style></head><body><main><header><h1>${escapeHTML(title)}</h1><p>A few projects from my workbench.</p></header><div class="grid">${cards || '<p>No public projects yet.</p>'}</div><footer>Made with Localist</footer></main></body></html>`
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHTML(title)}</title><style>*{box-sizing:border-box}body{font:15px/1.6 system-ui,sans-serif;color:#283b32;background:#fafbf8;margin:0;padding:32px}main{max-width:1000px;margin:auto}h1{font-size:28px;letter-spacing:-1px}header p{color:#69716b}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:16px}article{padding:24px;background:white;border:1px solid #e1e6de;border-radius:12px}h2{font-size:19px;margin:14px 0 8px}article p{color:#626960;min-height:48px}.meta{font-size:12px;color:#477656;display:flex;justify-content:space-between;gap:12px}.meta span{color:#69716b}.tags{display:flex;gap:6px;flex-wrap:wrap}.repositories{font-size:12px;color:#477656;margin-top:12px;overflow-wrap:anywhere}small{background:#f2f4ee;border-radius:4px;padding:2px 7px}footer{margin-top:24px;font-size:12px;color:#69716b}</style></head><body><main><header><h1>${escapeHTML(title)}</h1><p>A few projects from my workbench.</p></header><div class="grid">${cards || '<p>No public projects yet.</p>'}</div><footer>Made with Localist</footer></main></body></html>`
 }

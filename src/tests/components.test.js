@@ -18,12 +18,14 @@ test('extracted card and sidebar keep their actions connected', async t => {
   t.after(() => server.close())
   const { default: ProjectCard } = await server.ssrLoadModule('/src/componets/ProjectCard.jsx')
   const { default: Sidebar } = await server.ssrLoadModule('/src/componets/Sidebar.jsx')
+  const { default: ProjectDescription, fitDescription } = await server.ssrLoadModule('/src/componets/ProjectDescription.jsx')
   const project = {
     id: 'component-test',
     name: 'A project',
     path: '/private/project',
+    repositories: ['https://github.com/user/project', 'not a URL'],
     category: 'Custom',
-    description: '',
+    description: 'The complete description.\n' + 'More detail. '.repeat(30),
     tags: [],
     icon: 'folder',
     status: 'progress',
@@ -32,12 +34,13 @@ test('extracted card and sidebar keep their actions connected', async t => {
     updatedAt: '2026-05-21T14:30:00Z'
   }
   const changes = []
+  const copied = []
   const card = ProjectCard({
     project,
     menu: project.id,
     setMenu() {},
     edit() {},
-    copy() {},
+    copy: (value, message) => copied.push([value, message]),
     setCategory() {},
     setQuery() {},
     update: (selected, change) => {
@@ -45,13 +48,71 @@ test('extracted card and sidebar keep their actions connected', async t => {
       changes.push(change)
     }
   })
+  const description = elements(card).find(node => node.type === ProjectDescription)
+  assert.deepEqual(description.props, { description: project.description })
+  const originalGetComputedStyle = globalThis.getComputedStyle
+  let lineHeight = '20px'
+  globalThis.getComputedStyle = () => ({ lineHeight })
+  try {
+    let lines
+    const preview = {
+      open: false,
+      clientHeight: 79,
+      firstElementChild: {},
+      style: {
+        setProperty: (name, value) => {
+          assert.equal(name, '--description-lines')
+          lines = value
+        }
+      }
+    }
+    fitDescription(preview)
+    assert.equal(lines, '3')
+    preview.clientHeight = 100
+    fitDescription(preview)
+    assert.equal(lines, '5')
+    preview.clientHeight = 10
+    fitDescription(preview)
+    assert.equal(lines, '1')
+    lineHeight = '19.2px'
+    preview.clientHeight = 38
+    fitDescription(preview)
+    assert.equal(lines, '2')
+    preview.open = true
+    preview.clientHeight = 300
+    fitDescription(preview)
+    assert.equal(lines, '2')
+  } finally {
+    if (originalGetComputedStyle) globalThis.getComputedStyle = originalGetComputedStyle
+    else Reflect.deleteProperty(globalThis, 'getComputedStyle')
+  }
+  const emptyCard = ProjectCard({ project: { ...project, description: '' } })
+  assert.equal(
+    elements(emptyCard).some(node => node.type === ProjectDescription),
+    false
+  )
+  assert.equal(
+    elements(emptyCard).some(node => node.props?.class === 'project-description'),
+    false
+  )
   const buttons = elements(card).filter(node => node.type === 'button')
+  const repositoryButtons = buttons.filter(node => node.props.class === 'repository-copy')
+  assert.equal(repositoryButtons.length, 2)
+  repositoryButtons.forEach(button => button.props.onClick())
+  assert.deepEqual(
+    copied,
+    project.repositories.map(repository => [repository, 'Repository URL copied'])
+  )
+  assert.equal(buttons.find(node => node.props.class?.includes('repository-trigger')).props.title, project.repositories.join('\n'))
+  assert.ok(buttons.some(node => node.props.title === project.name))
+  assert.ok(buttons.some(node => node.props.title === project.category))
   buttons.find(node => node.props.class?.includes('visibility-button')).props.onClick()
   buttons.find(node => node.props.class?.includes('status-badge')).props.onClick()
   buttons.find(node => [node.props.children].flat().includes('Archive project')).props.onClick()
   assert.deepEqual(changes, [{ public: true }, { status: 'complete' }, { status: 'archived' }])
 
   let selectedCategory
+  let selectedModal
   const sidebar = Sidebar({
     mobileNav: false,
     status: 'all',
@@ -63,7 +124,9 @@ test('extracted card and sidebar keep their actions connected', async t => {
     loaded: true,
     loadError: '',
     navigate() {},
-    setModal() {},
+    setModal: value => {
+      selectedModal = value
+    },
     onCategory: value => {
       selectedCategory = value
     }
@@ -73,4 +136,12 @@ test('extracted card and sidebar keep their actions connected', async t => {
     .find(node => node.type === 'button')
     .props.onClick()
   assert.equal(selectedCategory, 'Custom')
+  const showcaseLinks = elements(sidebar).filter(node => node.props?.class === 'nav-item showcase-nav')
+  assert.equal(showcaseLinks.length, 1)
+  showcaseLinks[0].props.onClick()
+  assert.equal(selectedModal, 'showcase')
+  assert.equal(
+    elements(sidebar).some(node => node.props?.class === 'share-card'),
+    false
+  )
 })

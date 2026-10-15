@@ -10,6 +10,7 @@ const project = {
   description: 'Test description',
   category: 'Custom category',
   tags: ['Test tag'],
+  repositories: [],
   status: 'progress',
   public: true,
   icon: 'folder',
@@ -159,4 +160,30 @@ test('creation dates sort by time across time zones and keep ties stable', () =>
     filterProjects([project, { ...project, id: 'tied' }], { sort: 'created' }).map(p => p.id),
     [project.id, 'tied']
   )
+})
+
+test('repository entries accept arbitrary text and survive JSON round trips', () => {
+  const repositories = ['https://github.com/user/project', 'https://git.example.com/user/project', 'not a valid URL', 'git@server:repo', '  leave these spaces  ', 'javascript:alert(1)']
+  const index = { projects: [{ ...project, repositories }], categories: [] }
+  assert.deepEqual(validateIndex(JSON.parse(JSON.stringify(index))), index)
+  const legacy = { ...project }
+  delete legacy.repositories
+  assert.deepEqual(validateProjects([legacy])[0].repositories, [])
+  assert.equal(filterProjects(index.projects, { query: 'git.example.com' }).length, 1)
+  assert.equal(filterProjects(index.projects, { query: 'not a valid URL' }).length, 1)
+})
+
+test('showcase repository text is escaped and private repository entries stay private', () => {
+  const repositories = ['https://github.com/user/project', 'not a valid URL', '<img src=x onerror=alert(1)>', 'javascript:alert(1)']
+  const html = generateShowcase([
+    { ...project, repositories },
+    { ...project, public: false, repositories: ['PRIVATE_REPOSITORY'] }
+  ])
+  assert.ok(html.includes(repositories[0]))
+  assert.ok(html.includes(repositories[1]))
+  assert.ok(html.includes('&lt;img src=x onerror=alert(1)&gt;'))
+  assert.ok(!html.includes('<img'))
+  assert.ok(!html.includes('href="javascript:'))
+  assert.ok(!html.includes('PRIVATE_REPOSITORY'))
+  assert.ok(!html.includes(project.path))
 })

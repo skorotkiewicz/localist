@@ -78,11 +78,12 @@ test('the local endpoint loads and saves JSON and rejects invalid or cross-origi
   assert.equal(text.status, 415)
 })
 
-test('the JSON store preserves creation dates across edits and reloads', () => {
+test('the JSON store preserves creation dates and repository entries across edits and reloads', () => {
   const { file, store } = fixture()
   const project = {
     id: 'dates',
     name: 'Date test',
+    repositories: ['https://github.com/user/project', 'https://git.example.com/user/project', 'not a URL'],
     path: '/tmp/date-test',
     description: '',
     category: 'Test',
@@ -97,6 +98,7 @@ test('the JSON store preserves creation dates across edits and reloads', () => {
   index.projects[0].updatedAt = '2026-06-01T00:00:00Z'
   store.write(index)
   const saved = createProjectStore(file).read().projects[0]
+  assert.deepEqual(saved.repositories, project.repositories)
   assert.equal(saved.createdAt, project.createdAt)
   assert.equal(saved.updatedAt, '2026-06-01T00:00:00Z')
   assert.equal(JSON.parse(readFileSync(file, 'utf8')).projects[0].createdAt, project.createdAt)
