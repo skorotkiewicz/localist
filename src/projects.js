@@ -24,9 +24,10 @@ export function validateProjects(value) {
       p.tags.length > 30 ||
       !p.tags.every(t => typeof t === 'string' && t.length <= 100) ||
       typeof p.updatedAt !== 'string' ||
-      !Number.isFinite(Date.parse(p.updatedAt))
+      !Number.isFinite(Date.parse(p.updatedAt)) ||
+      (p.createdAt !== undefined && (typeof p.createdAt !== 'string' || !Number.isFinite(Date.parse(p.createdAt))))
     ) {
-      throw new Error('Invalid project data. Every project needs a unique ID, name, path, category, status, tags, visibility, and update date.')
+      throw new Error('Invalid project data. Every project needs a unique ID, name, path, category, status, tags, visibility, and valid dates.')
     }
     ids.add(p.id)
     return {
@@ -38,6 +39,8 @@ export function validateProjects(value) {
       tags: p.tags,
       status: p.status,
       public: p.public,
+      // shortcut: legacy indexes lack creation dates; use the last update until original dates are recovered.
+      createdAt: p.createdAt ?? p.updatedAt,
       updatedAt: p.updatedAt,
       icon: typeof p.icon === 'string' ? p.icon : 'folder'
     }
@@ -61,7 +64,11 @@ export function filterProjects(projects, { status = 'all', category = 'all', que
     .filter(
       p => (status === 'all' || p.status === status) && (category === 'all' || p.category === category) && (visibility === 'all' || p.public) && [p.name, p.path, p.description, p.category, ...p.tags].join(' ').toLowerCase().includes(needle)
     )
-    .sort((a, b) => (sort === 'name' ? a.name.localeCompare(b.name) : Date.parse(b.updatedAt) - Date.parse(a.updatedAt)))
+    .sort((a, b) => {
+      if (sort === 'name') return a.name.localeCompare(b.name)
+      const date = sort === 'created' ? 'createdAt' : 'updatedAt'
+      return Date.parse(b[date] ?? b.updatedAt) - Date.parse(a[date] ?? a.updatedAt)
+    })
 }
 
 const escapeHTML = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])

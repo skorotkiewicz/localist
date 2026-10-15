@@ -23,6 +23,7 @@ function ProjectEditor({ project, categories, save, close }) {
       <form
         onSubmit={e => {
           e.preventDefault()
+          const now = new Date().toISOString()
           save({
             ...draft,
             tags: tagText
@@ -34,7 +35,8 @@ function ProjectEditor({ project, categories, save, close }) {
             path: draft.path.trim(),
             category: draft.category.trim(),
             id: draft.id || crypto.randomUUID(),
-            updatedAt: new Date().toISOString()
+            createdAt: draft.createdAt ?? draft.updatedAt ?? now,
+            updatedAt: now
           })
         }}
       >

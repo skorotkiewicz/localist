@@ -81,6 +81,7 @@ export default function ProjectList({ projects, categories, loaded, loadError, s
             <span>Sort:</span>
             <select aria-label="Sort projects" value={sort} onChange={e => setSort(e.target.value)}>
               <option value="updated">Last updated</option>
+              <option value="created">Date created</option>
               <option value="name">Name A to Z</option>
             </select>
             <Icon name="chevron" size={13} />

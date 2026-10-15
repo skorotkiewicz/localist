@@ -28,6 +28,7 @@ test('extracted card and sidebar keep their actions connected', async t => {
     icon: 'folder',
     status: 'progress',
     public: false,
+    createdAt: '2026-05-01T14:30:00Z',
     updatedAt: '2026-05-21T14:30:00Z'
   }
   const changes = []

@@ -13,6 +13,7 @@ const project = {
   status: 'progress',
   public: true,
   icon: 'folder',
+  createdAt: '2026-05-01T14:30:00Z',
   updatedAt: '2026-05-21T14:30:00Z'
 }
 
@@ -102,4 +103,60 @@ test('showcase content is escaped against HTML injection', () => {
   assert.ok(html.includes('&lt;script&gt;'))
   assert.ok(html.includes('&lt;b&gt;Custom&lt;/b&gt;'))
   assert.ok(generateShowcase([]).includes('No public projects yet.'))
+})
+
+test('creation sorting is newest first while last updated remains the default', () => {
+  const older = { ...project, id: 'older', createdAt: '2026-05-01T00:00:00Z', updatedAt: '2026-05-25T00:00:00Z' }
+  const newer = { ...project, id: 'newer', createdAt: '2026-05-15T00:00:00Z', updatedAt: '2026-05-20T00:00:00Z' }
+  const projects = [older, newer]
+  assert.deepEqual(
+    filterProjects(projects).map(p => p.id),
+    ['older', 'newer']
+  )
+  assert.deepEqual(
+    filterProjects(projects, { sort: 'updated' }).map(p => p.id),
+    ['older', 'newer']
+  )
+  assert.deepEqual(
+    filterProjects(projects, { sort: 'created' }).map(p => p.id),
+    ['newer', 'older']
+  )
+  assert.deepEqual(
+    projects.map(p => p.id),
+    ['older', 'newer']
+  )
+  const edited = { ...older, updatedAt: '2026-06-01T00:00:00Z' }
+  assert.deepEqual(
+    filterProjects([edited, newer], { sort: 'created' }).map(p => p.id),
+    ['newer', 'older']
+  )
+})
+
+test('legacy projects gain a stable creation-date fallback and invalid creation dates are rejected', () => {
+  const legacy = { ...project }
+  delete legacy.createdAt
+  const migrated = validateProjects([legacy])[0]
+  assert.equal(migrated.createdAt, legacy.updatedAt)
+  assert.equal(validateProjects([{ ...migrated, updatedAt: '2026-06-01T00:00:00Z' }])[0].createdAt, legacy.updatedAt)
+  for (const createdAt of [null, 123, '', 'not-a-date']) {
+    assert.throws(() => validateProjects([{ ...project, createdAt }]))
+  }
+  const newerLegacy = { ...legacy, id: 'newer-legacy', updatedAt: '2026-06-01T00:00:00Z' }
+  assert.deepEqual(
+    filterProjects([legacy, newerLegacy], { sort: 'created' }).map(p => p.id),
+    ['newer-legacy', legacy.id]
+  )
+})
+
+test('creation dates sort by time across time zones and keep ties stable', () => {
+  const later = { ...project, id: 'later', createdAt: '2026-05-01T10:00:00-04:00' }
+  const earlier = { ...project, id: 'earlier', createdAt: '2026-05-01T13:00:00Z' }
+  assert.deepEqual(
+    filterProjects([earlier, later], { sort: 'created' }).map(p => p.id),
+    ['later', 'earlier']
+  )
+  assert.deepEqual(
+    filterProjects([project, { ...project, id: 'tied' }], { sort: 'created' }).map(p => p.id),
+    [project.id, 'tied']
+  )
 })

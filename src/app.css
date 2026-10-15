@@ -1012,41 +1012,125 @@ main {
   color: #91a47b;
   font-size: 14px;
 }
-.list-view {
+.project-grid.list-view {
   grid-template-columns: 1fr;
+  gap: 8px;
 }
 .list-view .project-card {
   display: grid;
-  grid-template-columns: 80px minmax(0, 1fr) 155px;
+  grid-template-columns: 32px minmax(120px, 1fr) minmax(140px, 1.5fr) auto auto;
+  grid-template-areas:
+    "icon name description status actions"
+    "icon path tags status actions";
   align-items: center;
+  column-gap: 12px;
+  row-gap: 2px;
+  min-height: 64px;
+  padding: 8px 12px;
 }
-.list-view .card-top {
-  padding: 18px;
-  display: block;
+.list-view .card-top,
+.list-view .project-info {
+  display: contents;
+}
+.list-view .project-icon {
+  grid-area: icon;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
 }
 .list-view .card-top-actions {
-  position: absolute;
-  right: 14px;
-  top: 14px;
+  grid-area: actions;
+  position: static;
+  align-self: center;
+  gap: 4px;
 }
-.list-view .project-info {
-  padding: 18px 22px 18px 0;
-}
-.list-view .project-description {
-  min-height: auto;
-  margin: 8px 0;
+.list-view .visibility-button,
+.list-view .more-button {
+  min-width: 32px;
+  min-height: 32px;
 }
 .list-view .project-info h3 {
-  padding-right: 100px;
+  grid-area: name;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  font-size: 14px;
+}
+.list-view .project-info h3 button {
+  display: block;
+  max-width: 100%;
+  min-height: 24px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.list-view .path-button {
+  grid-area: path;
+  min-width: 0;
+  min-height: 18px;
+  font-size: 9px;
+}
+.list-view .project-description {
+  grid-area: description;
+  display: block;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.list-view .tags {
+  grid-area: tags;
+  min-width: 0;
+  min-height: 18px;
+  flex-wrap: nowrap;
+}
+.list-view .tag {
+  min-width: 0;
+  overflow: hidden;
+  padding: 3px 6px;
+  font-size: 9px;
 }
 .list-view .card-footer {
-  height: 100%;
-  border-top: 0;
-  border-left: 1px solid #edf0e7;
+  grid-area: status;
+  height: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   flex-direction: column;
-  justify-content: flex-end;
-  padding-bottom: 20px;
-  gap: 10px;
+  justify-content: center;
+  gap: 3px;
+}
+.list-view .status-badge {
+  min-height: 26px;
+}
+.list-view .card-footer > span {
+  font-size: 9px;
+}
+.list-view .archived-card .project-info > * {
+  opacity: 0.8;
+}
+@media (max-width: 1000px) {
+  .list-view .project-card {
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "icon name actions"
+      "icon path actions"
+      "description description status"
+      "tags tags status";
+    column-gap: 8px;
+    row-gap: 3px;
+  }
+  .list-view .visibility-button,
+  .list-view .more-button,
+  .list-view .status-badge {
+    min-width: 44px;
+    min-height: 44px;
+  }
 }
 .empty-state {
   text-align: center;
@@ -1931,35 +2015,6 @@ main {
     font-size: 10px;
     padding-left: 10px;
     padding-right: 10px;
-  }
-  .list-view .project-card {
-    display: block;
-  }
-  .list-view .card-top {
-    padding: 21px 21px 0;
-  }
-  .list-view .project-info {
-    padding: 16px 21px 20px;
-  }
-  .list-view .project-info h3 {
-    padding-right: 0;
-  }
-  .list-view .project-description {
-    margin: 16px 0;
-  }
-  .list-view .card-top-actions {
-    right: 20px;
-    top: 20px;
-  }
-  .list-view .card-footer {
-    border-left: 0;
-    border-top: 1px solid #edf0e7;
-    flex-direction: row;
-    padding: 13px 20px;
-    justify-content: space-between;
-  }
-  .list-view .card-top .project-icon {
-    margin: 0;
   }
   .showcase-preview {
     height: 340px;
