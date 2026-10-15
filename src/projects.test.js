@@ -1,45 +1,53 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { demoProjects, filterProjects, generateShowcase, validateProjects } from './projects.js'
+import { filterProjects, generateShowcase, validateIndex, validateProjects } from './projects.js'
 
-test('the example index survives a JSON round trip', () => {
-  assert.deepEqual(validateProjects(JSON.parse(JSON.stringify(demoProjects))), demoProjects)
-  assert.deepEqual(validateProjects([]), [])
+const project = { id: 'test-1', name: 'Test project', path: '/private/test/project', description: 'Test description', category: 'Custom category', tags: ['Test tag'], status: 'progress', public: true, icon: 'folder', updatedAt: '2026-05-21T14:30:00Z' }
+
+test('a new index has no projects or preset categories', () => {
+  assert.deepEqual(validateIndex({ projects: [], categories: [] }), { projects: [], categories: [] })
+  assert.deepEqual(validateIndex([]), { projects: [], categories: [] })
 })
 
-test('filters match paths and tags, combine filters, and sort without mutating the index', () => {
-  assert.equal(filterProjects(demoProjects, { query: '~/Dev/Rust' }).length, 2)
-  assert.equal(filterProjects(demoProjects, { query: '  SELF-HOSTED ' })[0].name, 'Bunboard')
-  assert.equal(filterProjects(demoProjects, { category: 'Rust', status: 'complete' }).length, 0)
-  assert.equal(filterProjects(demoProjects, { visibility: 'public' }).length, 4)
-  const names = filterProjects(demoProjects, { sort: 'name' }).map(p => p.name)
-  assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b)))
-  assert.equal(demoProjects[0].name, 'Pocket CLI')
+test('custom categories survive JSON export and import, even without projects', () => {
+  const index = { projects: [project], categories: ['Custom category', 'An empty category'] }
+  assert.deepEqual(validateIndex(JSON.parse(JSON.stringify(index))), index)
+  assert.deepEqual(validateIndex({ projects: [], categories: ['Custom', 'Custom'] }).categories, ['Custom'])
+  assert.throws(() => validateIndex({ projects: [], categories: ['  '] }))
 })
 
-test('invalid imports are rejected before replacing any stored projects', () => {
-  for (const bad of [null, {}, [null], [demoProjects[0], demoProjects[0]], [{ ...demoProjects[0], status: 'constructor' }], [{ ...demoProjects[0], public: 'true' }], [{ ...demoProjects[0], updatedAt: 'not-a-date' }], [{ ...demoProjects[0], tags: [null] }], [{ ...demoProjects[0], path: '' }]]) {
+test('filters match paths and tags, combine filters, and do not mutate input', () => {
+  const projects = [project, { ...project, id: 'test-2', name: 'Another project', public: false }]
+  assert.equal(filterProjects(projects, { query: '/private/test' }).length, 2)
+  assert.equal(filterProjects(projects, { query: ' TEST TAG ' }).length, 2)
+  assert.equal(filterProjects(projects, { category: 'Custom category', status: 'complete' }).length, 0)
+  assert.equal(filterProjects(projects, { visibility: 'public' }).length, 1)
+  assert.equal(filterProjects(projects, { sort: 'name' })[0].name, 'Another project')
+  assert.equal(projects[0].name, 'Test project')
+})
+
+test('invalid imports are rejected and unknown fields are not persisted', () => {
+  for (const bad of [null, {}, [null], [project, project], [{ ...project, status: 'constructor' }], [{ ...project, public: 'true' }], [{ ...project, updatedAt: 'not-a-date' }], [{ ...project, tags: [null] }], [{ ...project, path: '' }]]) {
     assert.throws(() => validateProjects(bad))
   }
-  const project = validateProjects([{ ...demoProjects[0], unexpectedSecret: 'secret' }])[0]
-  assert.equal(project.unexpectedSecret, undefined)
+  assert.equal(validateProjects([{ ...project, secret: 'secret' }])[0].secret, undefined)
 })
 
-test('public HTML never includes private project data or local paths', () => {
-  const html = generateShowcase(demoProjects)
-  for (const p of demoProjects) {
-    assert.ok(!html.includes(p.path))
-    assert.equal(html.includes(`<h2>${p.name}</h2>`), p.public)
-    if (!p.public) assert.ok(!html.includes(p.description))
-  }
+test('public HTML excludes private projects and all local paths', () => {
+  const privateProject = { ...project, id: 'private', name: 'Private project', description: 'Private description', public: false }
+  const html = generateShowcase([project, privateProject])
+  assert.ok(html.includes('<h2>Test project</h2>'))
+  assert.ok(!html.includes(privateProject.name))
+  assert.ok(!html.includes(privateProject.description))
+  assert.ok(!html.includes(project.path))
 })
 
-test('showcase title, descriptions, categories, and tags are escaped against HTML injection', () => {
-  const html = generateShowcase([{ ...demoProjects[0], name: '<script>alert(1)</script>', description: '<img src=x onerror=alert(1)>', category: '<b>Rust</b>', tags: ['<iframe>'] }], '</title><script>bad()</script>')
+test('showcase content is escaped against HTML injection', () => {
+  const html = generateShowcase([{ ...project, name: '<script>alert(1)</script>', description: '<img src=x onerror=alert(1)>', category: '<b>Custom</b>', tags: ['<iframe>'] }], '</title><script>bad()</script>')
   assert.ok(!html.includes('<script>'))
   assert.ok(!html.includes('<img'))
   assert.ok(!html.includes('<iframe>'))
   assert.ok(html.includes('&lt;script&gt;'))
-  assert.ok(html.includes('&lt;b&gt;Rust&lt;/b&gt;'))
+  assert.ok(html.includes('&lt;b&gt;Custom&lt;/b&gt;'))
   assert.ok(generateShowcase([]).includes('No public projects yet.'))
 })

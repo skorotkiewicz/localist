@@ -1,18 +1,4 @@
-export const STORAGE_KEY = 'localist.projects.v1'
-export const CATEGORIES = ['Rust', 'Bun', 'TypeScript', 'Python', 'Other']
 export const STATUS_LABELS = { progress: 'In progress', complete: 'Completed', archived: 'Archived' }
-
-export const demoProjects = [
-  { id: '1', name: 'Pocket CLI', path: '~/Dev/Rust/pocket-cli', description: 'A tiny command-line companion for the things I do every day.', category: 'Rust', tags: ['CLI', 'Productivity'], status: 'progress', public: true, icon: 'terminal', updatedAt: '2026-05-21T14:30:00Z' },
-  { id: '2', name: 'Bunboard', path: '~/Dev/Bun/bunboard', description: 'A lightweight dashboard for keeping an eye on my self-hosted services.', category: 'Bun', tags: ['Dashboard', 'Self-hosted'], status: 'progress', public: false, icon: 'layout', updatedAt: '2026-05-20T10:00:00Z' },
-  { id: '3', name: 'folio', path: '~/Dev/TypeScript/folio', description: 'My little corner of the internet. Projects, writing, and a bit about me.', category: 'TypeScript', tags: ['Website', 'Personal'], status: 'complete', public: true, icon: 'window', updatedAt: '2026-05-19T10:00:00Z' },
-  { id: '4', name: 'Moss', path: '~/Dev/Rust/moss', description: 'An experimental, file-based key-value store. Small, fast, and a little green.', category: 'Rust', tags: ['Database', 'Experiment'], status: 'progress', public: true, icon: 'leaf', updatedAt: '2026-05-18T10:00:00Z' },
-  { id: '5', name: 'readlater', path: '~/Dev/Bun/readlater', description: 'Save interesting links now. Actually get around to reading them later.', category: 'Bun', tags: ['API', 'Side project'], status: 'progress', public: false, icon: 'bookmark', updatedAt: '2026-05-17T10:00:00Z' },
-  { id: '6', name: 'dotfiles', path: '~/Dev/Other/dotfiles', description: 'A familiar setup, wherever I am. My terminal, editor, and shell configs.', category: 'Other', tags: ['Config', 'Tools'], status: 'complete', public: true, icon: 'code', updatedAt: '2026-05-16T10:00:00Z' },
-  { id: '7', name: 'Fieldnotes', path: '~/Dev/TypeScript/fieldnotes', description: 'A quiet place to collect ideas, rough notes, and things worth remembering.', category: 'TypeScript', tags: ['Notes', 'Local-first'], status: 'progress', public: false, icon: 'book', updatedAt: '2026-05-15T10:00:00Z' },
-  { id: '8', name: 'Image tidy', path: '~/Dev/Python/image-tidy', description: 'A simple script to sort, resize, and make sense of my growing photo library.', category: 'Python', tags: ['Automation', 'Script'], status: 'complete', public: false, icon: 'image', updatedAt: '2026-05-14T10:00:00Z' },
-  { id: '9', name: 'weather-ish', path: '~/Dev/Python/weather-ish', description: 'A tiny weather app from a rainy weekend. Keeping it here for a sunny day.', category: 'Python', tags: ['API', 'Learning'], status: 'archived', public: false, icon: 'sun', updatedAt: '2026-05-13T10:00:00Z' },
-]
 
 export function validateProjects(value) {
   if (!Array.isArray(value) || value.length > 10000) throw new Error('Choose a JSON array with up to 10,000 projects.')
@@ -28,6 +14,16 @@ export function validateProjects(value) {
     ids.add(p.id)
     return { id: p.id, name: p.name, path: p.path, description: p.description, category: p.category, tags: p.tags, status: p.status, public: p.public, updatedAt: p.updatedAt, icon: typeof p.icon === 'string' ? p.icon : 'folder' }
   })
+}
+
+
+export function validateIndex(value) {
+  if (Array.isArray(value)) return { projects: validateProjects(value), categories: [] }
+  if (!value || !Array.isArray(value.categories) || value.categories.length > 1000 ||
+    !value.categories.every(c => typeof c === 'string' && c.trim().length > 0 && c.length <= 60)) {
+    throw new Error('The index needs projects and a list of category names.')
+  }
+  return { projects: validateProjects(value.projects), categories: [...new Set(value.categories.map(c => c.trim()))] }
 }
 
 export function filterProjects(projects, { status = 'all', category = 'all', query = '', visibility = 'all', sort = 'updated' } = {}) {
