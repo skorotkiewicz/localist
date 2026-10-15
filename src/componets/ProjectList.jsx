@@ -129,10 +129,6 @@ export default function ProjectList({ projects, categories, loaded, loadError, s
         <span>
           Showing {filtered.length} of {projects.length} projects
         </span>
-        <span>
-          <Icon name="lock" size={12} />
-          Just you, your projects, and a little clarity.
-        </span>
       </footer>
       {removing && (
         <RemoveProjectDialog

@@ -177,15 +177,6 @@ export function App() {
               <Icon name="arrow" size={16} />
             </button>
           </section>*/}
-          <div class="page-footer">
-            <span>A little less scattered. A little more built.</span>
-            <span>
-              Made for the work in progress.
-              <span class="footer-spark">
-                <Icon name="spark" size={14} />
-              </span>
-            </span>
-          </div>
         </main>
       </div>
       <input ref={importRef} type="file" accept=".json,application/json" hidden onChange={e => importJSON(e, { projects, categories, persist, notify, setModal })} />

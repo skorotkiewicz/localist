@@ -186,7 +186,6 @@
   margin-top: 26px;
   border-top: 1px solid #e1e5da;
   border-radius: 0;
-  padding-top: 21px;
   min-height: 58px;
 }
 .showcase-nav > svg:last-child {
@@ -686,11 +685,10 @@ main {
   position: relative;
 }
 .more-button {
-  font-size: 21px;
-  letter-spacing: 1px;
+  display: grid;
+  place-items: center;
   color: #909986;
-  line-height: 1;
-  padding: 0 0 8px;
+  padding: 0;
   width: 21px;
   height: 25px;
   border-radius: 4px;
@@ -948,17 +946,9 @@ details.project-description {
   opacity: 0.8;
 }
 .index-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   color: #9ba18f;
   font-size: 9px;
   margin-top: 20px;
-}
-.index-footer > span:last-child {
-  display: flex;
-  align-items: center;
-  gap: 5px;
 }
 
 /*.showcase-banner {
@@ -1014,22 +1004,6 @@ details.project-description {
   background: #e5edda;
 }*/
 
-.page-footer {
-  display: flex;
-  justify-content: space-between;
-  color: #a2a795;
-  font-size: 8px;
-  margin-top: 25px;
-}
-.page-footer > span:last-child {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.footer-spark {
-  color: #91a47b;
-  font-size: 14px;
-}
 .list-view .project-card {
   display: grid;
   grid-template-columns: 32px minmax(0, 1fr) minmax(0, 1.5fr) auto auto;
@@ -1735,9 +1709,6 @@ details.project-description {
     max-width: 300px;
   }*/
 
-  .page-footer {
-    font-size: 7px;
-  }
   .index-footer {
     font-size: 8px;
   }
@@ -1815,10 +1786,6 @@ details.project-description {
   /*.showcase-banner p {
     max-width: 270px;
   }*/
-
-  .index-footer > span:last-child {
-    font-size: 8px;
-  }
 }
 @media (max-width: 520px) {
   .topbar {
@@ -1967,9 +1934,6 @@ details.project-description {
   .card-footer > span {
     font-size: 9px;
   }
-  .index-footer > span:last-child {
-    display: none;
-  }
   .index-footer {
     font-size: 10px;
     margin-top: 18px;
@@ -2006,12 +1970,6 @@ details.project-description {
     gap: 12px;
   }*/
 
-  .page-footer {
-    font-size: 8px;
-  }
-  .page-footer > span:last-child {
-    display: none;
-  }
   .modal {
     padding: 21px;
     max-width: calc(100% - 24px);

@@ -22,7 +22,7 @@ export default function ProjectCard({ project: p, menu, setMenu, update, edit, r
           </button>
           <div class="card-menu">
             <button class="more-button" aria-label={`Actions for ${p.name}`} aria-expanded={menu === p.id} onClick={() => setMenu(menu === p.id ? null : p.id)}>
-              ···
+              <Icon name="more" size={20} />
             </button>
             {menu === p.id && (
               <div class="dropdown">

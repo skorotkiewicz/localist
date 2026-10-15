@@ -14,6 +14,7 @@ export const paths = {
   download: 'M12 3v12 m-5-5 5 5 5-5 M4 16v5h16v-5',
   upload: 'M12 16V4 m-5 5 5-5 5 5 M4 16v5h16v-5',
   close: 'm6 6 12 12 M6 18 18 6',
+  more: 'M5 12h.01 M12 12h.01 M19 12h.01',
   terminal: 'm5 7 5 5-5 5 M13 17h6',
   layout: 'M3 4h18v16H3z M3 9h18 M9 9v11',
   window: 'M3 4h18v16H3z M3 9h18 M6 6.5h.1 M9 6.5h.1 M12 6.5h.1',
