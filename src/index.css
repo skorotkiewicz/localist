@@ -36,38 +36,27 @@ input,
 select,
 textarea {
   -webkit-tap-highlight-color: transparent;
+  outline-offset: 4px;
 }
 button {
   cursor: pointer;
   color: inherit;
-}
-button {
   background: none;
   border: 0;
-}
-button,
-a,
-input,
-select,
-textarea {
-  outline-offset: 4px;
-}
-button:focus-visible,
-a:focus-visible {
-  outline: 2px solid var(--green);
-}
-input:focus,
-textarea:focus,
-select:focus {
-  outline: 2px solid #6c9376;
-  outline-offset: 1px;
-}
-button {
   transition:
     background 0.16s,
     color 0.16s,
     border-color 0.16s,
     box-shadow 0.16s;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--green);
 }
 a {
   color: inherit;
@@ -87,13 +76,13 @@ input,
 textarea,
 select {
   min-width: 0;
+  &:focus {
+    outline: 2px solid #6c9376;
+    outline-offset: 1px;
+  }
 }
 ::selection {
   background: #dce9d4;
-}
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 @media (prefers-reduced-motion: reduce) {
   *,

@@ -23,6 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 
+*.bak
 .agents
 resources
 # Private local project index
