@@ -573,6 +573,13 @@ main {
   z-index: 1;
   max-width: 130px;
 }
+:is(.select-wrap, .sort-wrap):focus-within {
+  outline: 2px solid #6c9376;
+  outline-offset: 1px;
+}
+:is(.select-wrap, .sort-wrap) select:focus {
+  outline: none;
+}
 .select-wrap > svg:last-child,
 .sort-wrap > svg:last-child {
   position: absolute;
