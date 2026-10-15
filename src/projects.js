@@ -81,6 +81,11 @@ export function removeArchivedProject(projects, id) {
   return projects.filter(p => p.id !== id || p.status !== 'archived')
 }
 
+export function removeUnusedCategory(projects, categories, category) {
+  if (!categories.includes(category) || projects.some(p => p.category === category)) return categories
+  return categories.filter(c => c !== category)
+}
+
 const escapeHTML = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
 
 export function generateShowcase(projects, title = 'Things I’m building') {

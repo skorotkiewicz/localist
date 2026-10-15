@@ -40,8 +40,8 @@ export default function Sidebar({ mobileNav, status, category, counts, categorie
       </nav>
       <div class="nav-label category-label">
         CATEGORIES{' '}
-        <button class="tiny-button" aria-label="Add category" onClick={() => setModal('category')}>
-          <Icon name="plus" size={15} />
+        <button class="tiny-button" aria-label="Manage categories" title="Add or remove categories" onClick={() => setModal('category')}>
+          <Icon name="settings" size={15} />
         </button>
       </div>
       <nav class="category-nav" aria-label="Project categories">
@@ -59,7 +59,6 @@ export default function Sidebar({ mobileNav, status, category, counts, categorie
         <Icon name="arrow" size={15} />
       </button>
       <div class="sidebar-bottom">
-
         <div class="share-card">
           <span class="share-icon">
             <Icon name="spark" size={20} />

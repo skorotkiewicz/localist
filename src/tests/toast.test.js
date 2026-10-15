@@ -14,6 +14,8 @@ const html = `<!doctype html><link rel="stylesheet" href="/src/index.css"><link 
 import { h, render } from 'preact'
 import Modal from '/src/componets/Modal.jsx'
 import Toast from '/src/componets/Toast.jsx'
+import CategoryDialog from '/src/componets/CategoryDialog.jsx'
+import { removeUnusedCategory } from '/src/projects.js'
 const root = document.getElementById('toast-root')
 const dialogRoot = document.getElementById('dialog-root')
 const wait = async predicate => {
@@ -53,6 +55,43 @@ try {
   document.querySelector('dialog .modal-heading button').click()
   await wait(() => document.querySelector('body > .toast') && !document.querySelector('dialog'))
   checkClickable()
+  const projects = [{ category: 'Active', status: 'progress' }, { category: 'Archived', status: 'archived' }]
+  let categories = ['Unused', 'Active', 'Archived']
+  let attempts = 0
+  let allowRemoval = false
+  let removed
+  const renderCategories = () => render(h(CategoryDialog, {
+    open: true, projects, categories, notify: show,
+    remove: async category => {
+      attempts++
+      if (!allowRemoval) return false
+      categories = removeUnusedCategory(projects, categories, category)
+      return true
+    },
+    onRemoved: category => { removed = category; renderCategories() },
+    close: () => render(null, dialogRoot)
+  }), dialogRoot)
+  renderCategories()
+  await wait(() => document.querySelector('dialog[open] .category-list'))
+  const removeButton = name => document.querySelector('[aria-label="Remove category ' + name + '"]')
+  check(removeButton('Active').disabled && removeButton('Archived').disabled, 'Used categories are removable')
+  removeButton('Unused').click()
+  await wait(() => document.querySelector('dialog[open] .button.danger'))
+  check(document.activeElement.textContent.trim() === 'Cancel', 'Confirmation does not focus Cancel')
+  check(attempts === 0, 'Opening confirmation removed a category')
+  document.querySelector('dialog .modal-footer button').click()
+  await wait(() => document.querySelector('dialog[open] .category-list'))
+  check(attempts === 0 && removeButton('Unused'), 'Cancel changed categories')
+  removeButton('Unused').click()
+  await wait(() => document.querySelector('dialog[open] .button.danger'))
+  document.querySelector('dialog .button.danger').click()
+  await wait(() => attempts === 1)
+  check(document.querySelector('dialog[open] .button.danger') && categories.includes('Unused'), 'Failed save discarded confirmation or category')
+  allowRemoval = true
+  document.querySelector('dialog .button.danger').click()
+  await wait(() => document.querySelector('dialog[open] .category-list') && !removeButton('Unused'))
+  check(removed === 'Unused' && attempts === 2 && categories.join(',') === 'Active,Archived', 'Removal changed the wrong categories')
+  check(projects.length === 2 && projects[1].category === 'Archived', 'Removal changed project records')
 } catch (error) {
   result = error.message
 }
@@ -62,7 +101,7 @@ output.textContent = result
 document.body.append(output)
 </script>`
 
-test('notifications remain readable and interactive with native dialogs', { skip: !existsSync(chromium) }, async t => {
+test('native dialogs keep notifications readable and category removal safe', { skip: !existsSync(chromium) }, async t => {
   const server = await createServer({
     configFile: false,
     plugins: [

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
-import { STATUS_LABELS, validateIndex } from '../projects'
+import { STATUS_LABELS, removeUnusedCategory, validateIndex } from '../projects'
 
 export default function useProjectIndex(notify) {
   const [loadError, setLoadError] = useState('')
@@ -66,5 +66,14 @@ export default function useProjectIndex(notify) {
     }
   }
 
-  return { projects, categories, counts, loaded, saving, loadError, persist }
+  async function removeCategory(category) {
+    const next = removeUnusedCategory(projects, extraCategories, category)
+    if (next === extraCategories) {
+      notify('This category is missing or still used by a project.')
+      return false
+    }
+    return persist(projects, next)
+  }
+
+  return { projects, categories, counts, loaded, saving, loadError, persist, removeCategory }
 }

@@ -22,7 +22,7 @@ export function App() {
   const [mobileNav, setMobileNav] = useState(false)
   const searchRef = useRef()
   const importRef = useRef()
-  const { projects, categories, counts, loaded, saving, loadError, persist } = useProjectIndex(notify)
+  const { projects, categories, counts, loaded, saving, loadError, persist, removeCategory } = useProjectIndex(notify)
   function notify(message) {
     setToast(message)
   }
@@ -204,6 +204,11 @@ export function App() {
           setCategory(value)
           setStatus('all')
         }}
+        remove={removeCategory}
+        onRemoved={value => {
+          if (category === value) setCategory('all')
+        }}
+        notify={notify}
         close={() => setModal(null)}
       />
       {modal === 'storage' && <StorageDialog projects={projects} categories={categories} loaded={loaded} notify={notify} importRef={importRef} close={() => setModal(null)} />}
