@@ -196,7 +196,8 @@
   padding-top: 45px;
 }
 
-/*.share-card {
+/* share-card */
+.share-card {
   background: #e9edde;
   border: 1px solid #dfe5d1;
   border-radius: 8px;
@@ -248,7 +249,8 @@
   line-height: 1;
   transform: rotate(15deg);
   font-weight: 300;
-}*/
+}
+/* /share-card */
 
 .storage-button {
   display: flex;
@@ -1619,9 +1621,11 @@ details.project-description {
     padding-right: 24px;
   }
 
-  /*.share-card {
+/* share-card */
+  .share-card {
     padding-left: 13px;
-  }*/
+  }
+/* /share-card */
 
   .toast {
     left: calc(50% + 105px);
@@ -2013,9 +2017,11 @@ details.project-description {
     height: 340px;
   }
 
-  /*.share-card p {
+/* share-card */
+  .share-card p {
     font-size: 11px;
-  }*/
+  }
+/* /share-card */
 
   .nav-item {
     min-height: 44px;

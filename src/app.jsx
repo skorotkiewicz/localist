@@ -117,7 +117,8 @@ export function App() {
               <p>A home for everything you’re building, and everything you’ll come back to.</p>
             </div>
             <div class="heading-actions">
-              <button class="button export-button" onClick={() => exportJSON({ loaded, projects, categories, notify })}>
+              {/* <button class="button export-button" onClick={() => exportJSON({ loaded, projects, categories, notify })}>*/}
+              <button class="button export-button" onClick={() => setModal('storage')}>
                 <Icon name="download" size={16} />
                 Export JSON
               </button>

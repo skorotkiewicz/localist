@@ -59,7 +59,8 @@ export default function Sidebar({ mobileNav, status, category, counts, categorie
         <Icon name="arrow" size={15} />
       </button>
       <div class="sidebar-bottom">
-        {/* <div class="share-card">
+
+        <div class="share-card">
           <span class="share-icon">
             <Icon name="spark" size={20} />
           </span>
@@ -75,7 +76,8 @@ export default function Sidebar({ mobileNav, status, category, counts, categorie
           <span class="share-decoration" aria-hidden="true">
             <Icon name="spark" size={100} />
           </span>
-        </div>*/}
+        </div>
+
         <button class="storage-button" onClick={() => setModal('storage')}>
           <span class="storage-led" />
           <span>
