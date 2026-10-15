@@ -1,0 +1,107 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    if: github.event.created && !github.event.deleted
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ubuntu-22.04
+            args: ''
+          - platform: windows-latest
+            args: ''
+          - platform: macos-latest
+            args: --target universal-apple-darwin
+    runs-on: ${{ matrix.platform }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libfuse2 xdg-utils
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ runner.os == 'macOS' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: tauri/src-tauri -> target
+
+      - name: Install shared frontend dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install desktop dependencies
+        working-directory: tauri
+        run: bun install --frozen-lockfile
+
+      - name: Test frontend
+        run: bun run test
+
+      - name: Test Rust backend
+        run: cargo test --locked --manifest-path tauri/src-tauri/Cargo.toml --lib
+
+      - name: Use tag version
+        id: version
+        run: |
+          bun -e '
+            const file = "tauri/src-tauri/tauri.conf.json"
+            const config = await Bun.file(file).json()
+            const version = process.env.GITHUB_REF_NAME.slice(1)
+            config.version = version
+            await Bun.write(file, JSON.stringify(config, null, 2))
+            await Bun.write(process.env.GITHUB_OUTPUT, `prerelease=${version.split("+")[0].includes("-")}\n`)
+          '
+
+      - name: Build installers and upload draft assets
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: tauri
+          tauriScript: bun run tauri
+          args: ${{ matrix.args }} -- --locked
+          tagName: ${{ github.ref_name }}
+          releaseName: Localist ${{ github.ref_name }}
+          releaseBody: Download the installer for your platform below. These builds are unsigned.
+          releaseDraft: true
+          prerelease: ${{ steps.version.outputs.prerelease == 'true' }}
+          uploadUpdaterJson: false
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Publish completed release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release edit "$GITHUB_REF_NAME" --draft=false
