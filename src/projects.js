@@ -68,7 +68,7 @@ export function filterProjects(projects, { status = 'all', category = 'all', que
       p =>
         (status === 'all' ? p.status !== 'archived' : p.status === status) &&
         (category === 'all' || p.category === category) &&
-        (visibility === 'all' || p.public) &&
+        (visibility === 'all' || p.public === (visibility === 'public')) &&
         [p.name, p.path, p.description, p.category, ...p.tags, ...p.repositories].join(' ').toLowerCase().includes(needle)
     )
     .sort((a, b) => {

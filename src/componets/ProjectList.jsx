@@ -81,6 +81,7 @@ export default function ProjectList({ projects, categories, loaded, loadError, s
             <select aria-label="Filter visibility" value={visibility} onChange={e => setVisibility(e.target.value)}>
               <option value="all">All visibility</option>
               <option value="public">Public only</option>
+              <option value="private">Private only</option>
             </select>
             <Icon name="chevron" size={13} />
           </div>

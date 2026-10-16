@@ -65,6 +65,20 @@ test('filters match paths and tags, combine filters, and do not mutate input', (
   assert.equal(projects[0].name, 'Test project')
 })
 
+test('visibility filters distinguish public and private projects and combine with other filters', () => {
+  const privateProject = { ...project, id: 'private', public: false, tags: ['Private tag'] }
+  const other = { ...privateProject, id: 'other', category: 'Other' }
+  const archived = { ...privateProject, id: 'archived', status: 'archived' }
+  const publicArchived = { ...project, id: 'public-archived', status: 'archived' }
+  const projects = [project, privateProject, other, archived, publicArchived]
+  assert.deepEqual(filterProjects(projects, { visibility: 'all' }), [project, privateProject, other])
+  assert.deepEqual(filterProjects(projects, { visibility: 'public' }), [project])
+  assert.deepEqual(filterProjects(projects, { visibility: 'private' }), [privateProject, other])
+  assert.deepEqual(filterProjects(projects, { visibility: 'private', category: project.category, query: 'PRIVATE TAG' }), [privateProject])
+  assert.deepEqual(filterProjects(projects, { visibility: 'private', status: 'archived' }), [archived])
+  assert.deepEqual(filterProjects(projects, { visibility: 'public', status: 'archived' }), [publicArchived])
+})
+
 test('invalid imports are rejected and unknown fields are not persisted', () => {
   for (const bad of [null, {}, [null], [project, project], [{ ...project, status: 'constructor' }], [{ ...project, public: 'true' }], [{ ...project, updatedAt: 'not-a-date' }], [{ ...project, tags: [null] }], [{ ...project, path: '' }]]) {
     assert.throws(() => validateProjects(bad))

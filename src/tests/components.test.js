@@ -243,6 +243,10 @@ try {
   clear().click()
   await wait(() => !clear() && count() === 1)
   check(visibility.value === 'public' && document.activeElement === input, 'Clear search reset visibility or lost focus')
+  visibility.value = 'private'
+  visibility.dispatchEvent(new Event('change', { bubbles: true }))
+  await wait(() => count() === 1 && document.querySelector('.project-card h3').textContent === 'Beta')
+  check(visibility.value === 'private', 'Private only option is missing')
   check(document.documentElement.scrollWidth <= innerWidth, 'Search toolbar overflows')
 } catch (error) { result = error.message }
 const output = document.createElement('pre'); output.id = 'search-check-result'; output.textContent = result; document.body.append(output)
