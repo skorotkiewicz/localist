@@ -213,24 +213,9 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #a5ab99;
+  background: var(--category-color);
   margin-left: 5px;
   margin-right: 5px;
-  &.rust {
-    background: #c08e6e;
-  }
-  &.bun {
-    background: #bdac7d;
-  }
-  &.typescript {
-    background: #7c9bac;
-  }
-  &.python {
-    background: #a6ae79;
-  }
-  &.other {
-    background: #b1b1a9;
-  }
 }
 .category-count {
   font-size: 11px;
@@ -721,9 +706,7 @@ main {
   width: 42px;
   height: 42px;
   border-radius: 10px;
-  color: #83916f;
-  background: #eff2e8;
-  border: 1px solid #e6ebde;
+  border: 1px solid transparent;
   .list-view & {
     grid-area: icon;
     width: 32px;
@@ -731,30 +714,11 @@ main {
     border-radius: 8px;
   }
 }
-.color-rust {
-  background: #f6ede5;
-  color: #b98767;
-  border-color: #efe1d5;
-}
-.color-bun {
-  background: #f7f2e6;
-  color: #ac9569;
-  border-color: #f0e8d5;
-}
-.color-typescript {
-  background: #edf2f4;
-  color: #7a99a3;
-  border-color: #e1e8ec;
-}
-.color-python {
-  background: #f2f3e6;
-  color: #9a9f6f;
-  border-color: #e9ebd9;
-}
-.color-other {
-  background: #f0f0eb;
-  color: #919581;
-  border-color: #e6e7dd;
+.project-icon,
+.tag.language-tag {
+  color: var(--category-color);
+  background: color-mix(in srgb, var(--category-color) 8%, white);
+  border-color: color-mix(in srgb, var(--category-color) 20%, white);
 }
 .card-top-actions {
   display: flex;
@@ -1027,37 +991,19 @@ details.project-description {
     background: #e5ebdc;
     color: #61764f;
   }
-  /*&.language-tag {
-    background: #f9f0e8;
-    color: #b58b70;
-    border-color: #f1e5d9;
+  &.language-tag {
     > span {
       width: 4px;
       height: 4px;
+      flex-shrink: 0;
       background: currentColor;
       border-radius: 50%;
     }
-    &.bun {
-      background: #f8f3e6;
-      color: #a79266;
-      border-color: #efe8d6;
+    &:hover {
+      color: var(--category-color);
+      background: color-mix(in srgb, var(--category-color) 12%, white);
     }
-    &.typescript {
-      background: #eef3f5;
-      color: #7e99a5;
-      border-color: #e4ebee;
-    }
-    &.python {
-      background: #f4f5e9;
-      color: #9a9f6b;
-      border-color: #eaecd8;
-    }
-    &.other {
-      background: #f0f1eb;
-      color: #8b9479;
-      border-color: #e5e8de;
-    }
-  }*/
+  }
   .list-view & {
     min-width: 0;
     overflow: hidden;

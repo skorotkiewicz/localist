@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createServer } from 'vite'
 import preact from '@preact/preset-vite'
+import { getCategoryColor } from '../helpers/categoryColor.js'
 
 function elements(node) {
   if (!node || typeof node !== 'object') return []
@@ -52,6 +53,9 @@ test('extracted components keep their actions connected', async t => {
       changes.push(change)
     }
   })
+  assert.equal(card.props.style['--category-color'], getCategoryColor(project.category))
+  assert.ok(elements(card).some(node => node.props?.class === 'project-icon'))
+  assert.ok(elements(card).some(node => node.props?.class === 'tag language-tag'))
   const description = elements(card).find(node => node.type === ProjectDescription)
   assert.deepEqual(description.props, { description: project.description })
   const disclosure = ProjectDescription(description.props)
@@ -139,6 +143,7 @@ test('extracted components keep their actions connected', async t => {
   })
   const categoryNav = elements(sidebar).find(node => node.props?.['aria-label'] === 'Project categories')
   assert.equal(elements(categoryNav).find(node => node.props?.class === 'category-count').props.children, 1)
+  assert.equal(elements(categoryNav).find(node => node.type === 'button').props.style['--category-color'], card.props.style['--category-color'])
   const statusNav = elements(sidebar).find(node => node.props?.['aria-label'] === 'Project status')
   assert.equal(elements(statusNav).find(node => node.props?.class === 'nav-count').props.children, 1)
 

@@ -1,13 +1,14 @@
 import { STATUS_LABELS } from '../projects'
+import { getCategoryColor } from '../helpers/categoryColor'
 import Icon from './Icon'
 import ProjectDescription from './ProjectDescription'
 
 export default function ProjectCard({ project: p, menu, setMenu, update, edit, remove, copy, setCategory, setQuery }) {
   const repositories = p.repositories
   return (
-    <article class={`project-card ${p.status === 'archived' ? 'archived-card' : ''}`}>
+    <article class={`project-card ${p.status === 'archived' ? 'archived-card' : ''}`} style={{ '--category-color': getCategoryColor(p.category) }}>
       <div class="card-top">
-        <span class={`project-icon color-${p.category.toLowerCase().replace(/[^a-z]/g, '')}`}>
+        <span class="project-icon">
           <Icon name={p.icon} size={24} />
         </span>
         <div class="card-top-actions">
@@ -106,7 +107,7 @@ export default function ProjectCard({ project: p, menu, setMenu, update, edit, r
         {p.description && <ProjectDescription description={p.description} />}
         {/* {p.description ? <ProjectDescription description={p.description} /> : <p class="project-description">A new idea, waiting to take shape.</p> }*/}
         <div class="tags">
-          <button class="tag language-tag other" title={p.category} onClick={() => setCategory(p.category)}>
+          <button class="tag language-tag" title={p.category} onClick={() => setCategory(p.category)}>
             <span />
             {p.category}
           </button>
