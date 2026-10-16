@@ -1,12 +1,12 @@
 {
   "name": "projects-index",
   "private": true,
-  "version": "1.20.5",
+  "version": "1.21.3",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "test": "node --test src/tests/*.test.js",
+    "test": "node --test --test-concurrency=1 src/tests/*.test.js",
     "preview": "vite preview",
     "format": "biome format --write .",
     "format:check": "biome format ."

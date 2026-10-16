@@ -33,3 +33,7 @@ lto = true
 opt-level = 3
 panic = "abort"
 strip = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+# Enable KSNI on the same tray-icon dependency used by Tauri.
+tray-icon = { version = "0.25", default-features = false, features = ["ksni"] }
