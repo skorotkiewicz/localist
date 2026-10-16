@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createServer } from 'vite'
 import preact from '@preact/preset-vite'
-import { getCategoryColor } from '../helpers/categoryColor.js'
+import { getTagColor } from '../helpers/tagColor.js'
 
 function elements(node) {
   if (!node || typeof node !== 'object') return []
@@ -31,7 +31,7 @@ test('extracted components keep their actions connected', async t => {
     repositories: ['https://github.com/user/project', 'not a URL'],
     category: 'Custom',
     description: 'The complete description.\n' + 'More detail. '.repeat(30),
-    tags: [],
+    tags: ['First tag', 'Second tag', 'Hidden tag'],
     icon: 'folder',
     status: 'progress',
     public: false,
@@ -40,6 +40,7 @@ test('extracted components keep their actions connected', async t => {
   }
   const changes = []
   const copied = []
+  const queried = []
   const card = ProjectCard({
     project,
     menu: project.id,
@@ -47,15 +48,22 @@ test('extracted components keep their actions connected', async t => {
     edit() {},
     copy: (value, message) => copied.push([value, message]),
     setCategory() {},
-    setQuery() {},
+    setQuery: tag => queried.push(tag),
     update: (selected, change) => {
       assert.equal(selected, project)
       changes.push(change)
     }
   })
-  assert.equal(card.props.style['--category-color'], getCategoryColor(project.category))
+  assert.equal(card.props.style, undefined)
   assert.ok(elements(card).some(node => node.props?.class === 'project-icon'))
-  assert.ok(elements(card).some(node => node.props?.class === 'tag language-tag'))
+  assert.equal(elements(card).find(node => node.props?.class === 'tag language-tag').props.style, undefined)
+  const tags = elements(card).filter(node => node.props?.class === 'tag colored-tag')
+  assert.equal(tags.length, 2)
+  tags.forEach((tag, index) => {
+    assert.equal(tag.props.style['--tag-color'], getTagColor(project.tags[index]))
+    tag.props.onClick()
+  })
+  assert.deepEqual(queried, project.tags.slice(0, 2))
   const description = elements(card).find(node => node.type === ProjectDescription)
   assert.deepEqual(description.props, { description: project.description })
   const disclosure = ProjectDescription(description.props)
@@ -143,7 +151,7 @@ test('extracted components keep their actions connected', async t => {
   })
   const categoryNav = elements(sidebar).find(node => node.props?.['aria-label'] === 'Project categories')
   assert.equal(elements(categoryNav).find(node => node.props?.class === 'category-count').props.children, 1)
-  assert.equal(elements(categoryNav).find(node => node.type === 'button').props.style['--category-color'], card.props.style['--category-color'])
+  assert.equal(elements(categoryNav).find(node => node.type === 'button').props.style, undefined)
   const statusNav = elements(sidebar).find(node => node.props?.['aria-label'] === 'Project status')
   assert.equal(elements(statusNav).find(node => node.props?.class === 'nav-count').props.children, 1)
 

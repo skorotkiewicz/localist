@@ -1,5 +1,4 @@
 import Icon from './Icon'
-import { getCategoryColor } from '../helpers/categoryColor'
 
 export default function Sidebar({ mobileNav, status, category, counts, categories, projects, saving, loaded, loadError, navigate, setModal, onCategory }) {
   return (
@@ -47,7 +46,7 @@ export default function Sidebar({ mobileNav, status, category, counts, categorie
       </div>
       <nav class="category-nav" aria-label="Project categories">
         {categories.map(c => (
-          <button class={`nav-item ${category === c ? 'category-active' : ''}`} key={c} style={{ '--category-color': getCategoryColor(c) }} onClick={() => onCategory(c)}>
+          <button class={`nav-item ${category === c ? 'category-active' : ''}`} key={c} onClick={() => onCategory(c)}>
             <span class="category-dot" />
             <span>{c}</span>
             <span class="category-count">{projects.filter(p => p.category === c && p.status !== 'archived').length}</span>

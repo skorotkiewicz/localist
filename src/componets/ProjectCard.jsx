@@ -1,12 +1,12 @@
 import { STATUS_LABELS } from '../projects'
-import { getCategoryColor } from '../helpers/categoryColor'
+import { getTagColor } from '../helpers/tagColor'
 import Icon from './Icon'
 import ProjectDescription from './ProjectDescription'
 
 export default function ProjectCard({ project: p, menu, setMenu, update, edit, remove, copy, setCategory, setQuery }) {
   const repositories = p.repositories
   return (
-    <article class={`project-card ${p.status === 'archived' ? 'archived-card' : ''}`} style={{ '--category-color': getCategoryColor(p.category) }}>
+    <article class={`project-card ${p.status === 'archived' ? 'archived-card' : ''}`}>
       <div class="card-top">
         <span class="project-icon">
           <Icon name={p.icon} size={24} />
@@ -112,7 +112,7 @@ export default function ProjectCard({ project: p, menu, setMenu, update, edit, r
             {p.category}
           </button>
           {p.tags.slice(0, 2).map(t => (
-            <button class="tag" key={t} title={t} onClick={() => setQuery(t)}>
+            <button class="tag colored-tag" key={t} title={t} style={{ '--tag-color': getTagColor(t) }} onClick={() => setQuery(t)}>
               {t}
             </button>
           ))}

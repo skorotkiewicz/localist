@@ -213,7 +213,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--category-color);
+  background: #a5ab99;
   margin-left: 5px;
   margin-right: 5px;
 }
@@ -706,19 +706,15 @@ main {
   width: 42px;
   height: 42px;
   border-radius: 10px;
-  border: 1px solid transparent;
+  color: #83916f;
+  background: #eff2e8;
+  border: 1px solid #e6ebde;
   .list-view & {
     grid-area: icon;
     width: 32px;
     height: 32px;
     border-radius: 8px;
   }
-}
-.project-icon,
-.tag.language-tag {
-  color: var(--category-color);
-  background: color-mix(in srgb, var(--category-color) 8%, white);
-  border-color: color-mix(in srgb, var(--category-color) 20%, white);
 }
 .card-top-actions {
   display: flex;
@@ -991,18 +987,20 @@ details.project-description {
     background: #e5ebdc;
     color: #61764f;
   }
-  &.language-tag {
-    > span {
-      width: 4px;
-      height: 4px;
-      flex-shrink: 0;
-      background: currentColor;
-      border-radius: 50%;
-    }
+  &.colored-tag {
+    color: var(--tag-color);
+    background: color-mix(in srgb, var(--tag-color) 8%, white);
+    border-color: color-mix(in srgb, var(--tag-color) 20%, white);
     &:hover {
-      color: var(--category-color);
-      background: color-mix(in srgb, var(--category-color) 12%, white);
+      background: color-mix(in srgb, var(--tag-color) 12%, white);
     }
+  }
+  &.language-tag > span {
+    width: 4px;
+    height: 4px;
+    flex-shrink: 0;
+    background: currentColor;
+    border-radius: 50%;
   }
   .list-view & {
     min-width: 0;
