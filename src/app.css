@@ -574,6 +574,7 @@ main {
   input {
     border: 0;
     width: 100%;
+    min-width: 0;
     flex: 1;
     background: none;
     padding: 8px 0;
@@ -597,6 +598,9 @@ main {
     white-space: nowrap;
     color: #a0a694;
   }
+}
+.search-clear {
+  flex-shrink: 0;
 }
 .filters {
   display: flex;

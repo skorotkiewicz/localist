@@ -1,5 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { existsSync } from 'node:fs'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 import { createServer } from 'vite'
 import preact from '@preact/preset-vite'
 import { getTagColor } from '../helpers/tagColor.js'
@@ -196,4 +199,79 @@ test('extracted components keep their actions connected', async t => {
     elements(sidebar).some(node => node.props?.class === 'share-card'),
     true
   )
+})
+
+test('clear search resets only the query and returns focus to the input', { skip: !existsSync('/usr/lib/chromium/chromium') }, async t => {
+  const html = `<!doctype html><link rel="stylesheet" href="/src/index.css"><link rel="stylesheet" href="/src/app.css"><div id="root"></div><script type="module">
+import { h, render } from 'preact'
+import ProjectList from '/src/componets/ProjectList.jsx'
+const project = { id: 'alpha', name: 'Alpha', path: '/alpha', category: 'Custom', description: '', tags: [], repositories: [], status: 'progress', public: true, icon: 'folder', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' }
+const projects = [project, { ...project, id: 'beta', name: 'Beta', public: false }, { ...project, id: 'other', category: 'Other' }]
+const searchRef = { current: null }
+render(h(ProjectList, { projects, categories: ['Custom', 'Other'], loaded: true, status: 'all', category: 'Custom', searchRef, setCategory: () => { throw Error('Clear search reset the category') } }), document.querySelector('#root'))
+const check = (value, message) => { if (!value) throw Error(message) }
+const wait = async predicate => {
+  for (let attempt = 0; attempt < 100; attempt++) {
+    if (predicate()) return
+    await new Promise(resolve => setTimeout(resolve, 10))
+  }
+  throw Error('Search did not reach its expected state')
+}
+let result = 'passed'
+try {
+  const input = searchRef.current
+  const clear = () => document.querySelector('[aria-label="Clear search"]')
+  const count = () => document.querySelectorAll('.project-card').length
+  check(!clear() && count() === 2, 'Empty search shows a clear button or incorrect results')
+  input.value = 'Beta'
+  input.dispatchEvent(new Event('input', { bubbles: true }))
+  await wait(() => clear() && count() === 1)
+  clear().focus()
+  check(document.activeElement === clear(), 'Clear button cannot receive keyboard focus')
+  const rect = clear().getBoundingClientRect()
+  check(rect.width >= 24 && rect.height >= 24 && rect.right <= innerWidth, 'Clear button is too small or overflows')
+  clear().click()
+  await wait(() => !clear() && input.value === '' && count() === 2)
+  check(document.activeElement === input, 'Clear search did not restore input focus')
+  const visibility = document.querySelector('[aria-label="Filter visibility"]')
+  visibility.value = 'public'
+  visibility.dispatchEvent(new Event('change', { bubbles: true }))
+  await wait(() => count() === 1)
+  input.value = 'not found'
+  input.dispatchEvent(new Event('input', { bubbles: true }))
+  await wait(() => clear() && count() === 0)
+  clear().click()
+  await wait(() => !clear() && count() === 1)
+  check(visibility.value === 'public' && document.activeElement === input, 'Clear search reset visibility or lost focus')
+  check(document.documentElement.scrollWidth <= innerWidth, 'Search toolbar overflows')
+} catch (error) { result = error.message }
+const output = document.createElement('pre'); output.id = 'search-check-result'; output.textContent = result; document.body.append(output)
+</script>`
+  const server = await createServer({
+    configFile: false,
+    plugins: [
+      preact(),
+      {
+        name: 'search-check',
+        configureServer(server) {
+          server.middlewares.use('/search-check', async (_request, response) => {
+            response.setHeader('Content-Type', 'text/html')
+            response.end(await server.transformIndexHtml('/search-check', html))
+          })
+        }
+      }
+    ],
+    server: { host: '127.0.0.1', port: 0 },
+    logLevel: 'silent'
+  })
+  t.after(() => server.close())
+  await server.listen()
+  for (const width of [360, 800, 1440]) {
+    const { stdout } = await promisify(execFile)(
+      '/usr/lib/chromium/chromium',
+      ['--headless', '--no-sandbox', '--disable-gpu', `--window-size=${width},900`, '--dump-dom', '--virtual-time-budget=3000', `http://127.0.0.1:${server.httpServer.address().port}/search-check`],
+      { timeout: 20000, maxBuffer: 2 * 1024 * 1024 }
+    )
+    assert.equal(stdout.match(/<pre id="search-check-result">([^<]+)<\/pre>/)?.[1], 'passed', `Search browser check failed at ${width}px`)
+  }
 })

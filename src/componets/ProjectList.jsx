@@ -49,6 +49,20 @@ export default function ProjectList({ projects, categories, loaded, loadError, s
         <div class="search-box">
           <Icon name="search" size={18} />
           <input ref={searchRef} value={query} onInput={e => setQuery(e.target.value)} placeholder="Find a project, path, or tag..." aria-label="Search projects" />
+          {query && (
+            <button
+              type="button"
+              class="icon-button search-clear"
+              aria-label="Clear search"
+              title="Clear search"
+              onClick={() => {
+                setQuery('')
+                searchRef.current?.focus()
+              }}
+            >
+              <Icon name="close" size={14} />
+            </button>
+          )}
           <kbd>⌘ K</kbd>
         </div>
         <div class="filters">
