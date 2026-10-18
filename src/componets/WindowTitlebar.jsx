@@ -22,7 +22,7 @@ export default function WindowTitlebar({ controls, notify }) {
       </div>
       <div class="window-controls" role="group" aria-label="Window controls">
         {[
-          ['minimize', 'minimize', 'Minimize window'],
+          ['hide', 'minimize', 'Hide to tray'],
           ['toggleMaximize', 'maximize', 'Maximize or restore window'],
           ['close', 'close', 'Close window']
         ].map(([action, icon, label]) => (

@@ -47,7 +47,7 @@ Vite selects the platform adapter at build time:
 
 Install the existing dependencies with `bun install` in both directories when setting up a fresh checkout. The desktop folder requires its parent project.
 
-The desktop tray offers Show / hide Localist and Quit. Left-click toggles the window on Windows and macOS. Linux builds use the KSNI backend for left-click activation on StatusNotifier-compatible panels; the menu remains available. Showing also restores minimized windows. The window's close behavior is unchanged.
+The desktop tray offers Show / hide Localist and Quit. The title-bar Hide to tray button hides the window without quitting. Left-click toggles the window on Windows and macOS. Linux builds use the KSNI backend for left-click activation on StatusNotifier-compatible panels; the menu remains available. Showing also restores minimized windows. The window's close behavior is unchanged.
 
 ## Data
 

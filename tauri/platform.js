@@ -2,7 +2,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 
 export const windowControls = {
-  minimize: () => getCurrentWindow().minimize(),
+  hide: () => getCurrentWindow().hide(),
   toggleMaximize: () => getCurrentWindow().toggleMaximize(),
   close: () => getCurrentWindow().close()
 }

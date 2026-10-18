@@ -37,7 +37,7 @@ const checkClickable = () => {
 }
 const windowActions = []
 let failWindowAction = false
-render(h(WindowTitlebar, { controls: Object.fromEntries(['minimize', 'toggleMaximize', 'close'].map(action => [action, async () => {
+render(h(WindowTitlebar, { controls: Object.fromEntries(['hide', 'toggleMaximize', 'close'].map(action => [action, async () => {
   if (failWindowAction) throw Error('Native window unavailable')
   windowActions.push(action)
 }])), notify: show }), document.getElementById('window-root'))
@@ -49,6 +49,7 @@ const checkWindowControls = () => {
   check(document.elementFromPoint(dragRect.x + 20, dragRect.y + 20) === dragRegion, 'Title text blocks native dragging')
   const buttons = [...document.querySelectorAll('.window-controls button')]
   check(buttons.length === 3, 'Window buttons are missing')
+  check(buttons[0].getAttribute('aria-label') === 'Hide to tray', 'Hide button has the wrong accessible label')
   for (const button of buttons) {
     const rect = button.getBoundingClientRect()
     check(rect.width >= 44 && rect.height >= 44, 'Window target is too small')
@@ -62,7 +63,7 @@ try {
   checkWindowControls()
   document.querySelectorAll('.window-controls button').forEach(button => button.click())
   await wait(() => windowActions.length === 3)
-  check(windowActions.join(',') === 'minimize,toggleMaximize,close', 'Window actions are wired incorrectly')
+  check(windowActions.join(',') === 'hide,toggleMaximize,close', 'Window actions are wired incorrectly')
   show('Project index exported')
   await wait(() => document.querySelector('.toast'))
   checkClickable()
@@ -72,7 +73,7 @@ try {
   checkWindowControls()
   failWindowAction = true
   document.querySelector('.window-controls button').click()
-  await wait(() => document.querySelector('.toast-message')?.textContent === 'Could not minimize window: Native window unavailable')
+  await wait(() => document.querySelector('.toast-message')?.textContent === 'Could not hide to tray: Native window unavailable')
   checkClickable()
   failWindowAction = false
   show('Export failed: ' + '/a-long-folder-name'.repeat(25))

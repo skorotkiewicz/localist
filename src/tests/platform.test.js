@@ -24,7 +24,8 @@ test('both Vite builds share one frontend and select their own adapter', { skip:
   assert.equal(JSON.parse(desktopConfig.define.__APP_VERSION__), desktopApp.version)
   assert.equal(desktopApp.app.windows[0].decorations, false)
   const { permissions } = JSON.parse(readFileSync(resolve(root, 'tauri/src-tauri/capabilities/default.json'), 'utf8'))
-  for (const action of ['minimize', 'toggle-maximize', 'close', 'start-dragging']) assert.ok(permissions.includes(`core:window:allow-${action}`))
+  for (const action of ['hide', 'toggle-maximize', 'close', 'start-dragging']) assert.ok(permissions.includes(`core:window:allow-${action}`))
+  assert.ok(!permissions.includes('core:window:allow-minimize'))
   assert.equal(resolve(webConfig.root), resolve(root))
   assert.equal(resolve(desktopConfig.root), resolve(root))
   assert.equal(desktopConfig.publicDir, webConfig.publicDir)
@@ -37,5 +38,19 @@ test('both Vite builds share one frontend and select their own adapter', { skip:
   assert.ok(desktopConfig.server.fs.deny.includes('**/data/**'))
   const desktop = await import('../../tauri/platform.js')
   assert.deepEqual(Object.keys(desktop).sort(), Object.keys(web).sort())
-  assert.deepEqual(Object.keys(desktop.windowControls).sort(), ['close', 'minimize', 'toggleMaximize'])
+  assert.deepEqual(Object.keys(desktop.windowControls).sort(), ['close', 'hide', 'toggleMaximize'])
+  const originalWindow = globalThis.window
+  const calls = []
+  try {
+    globalThis.window = {
+      __TAURI_INTERNALS__: {
+        metadata: { currentWindow: { label: 'main' } },
+        invoke: async (command, args) => calls.push([command, args])
+      }
+    }
+    await desktop.windowControls.hide()
+    assert.deepEqual(calls, [['plugin:window|hide', { label: 'main' }]])
+  } finally {
+    globalThis.window = originalWindow
+  }
 })
