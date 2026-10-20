@@ -6,21 +6,12 @@ function Modal({ title, subtitle, close, children, wide }) {
   useEffect(() => {
     const dialog = ref.current
     dialog.showModal()
-    const onCancel = e => {
-      e.preventDefault()
-      close()
-    }
+    const onCancel = e => e.preventDefault()
     dialog.addEventListener('cancel', onCancel)
     return () => dialog.removeEventListener('cancel', onCancel)
   }, [])
   return (
-    <dialog
-      ref={ref}
-      class={`modal ${wide ? 'wide' : ''}`}
-      onClick={e => {
-        if (e.target === ref.current) close()
-      }}
-    >
+    <dialog ref={ref} class={`modal ${wide ? 'wide' : ''}`}>
       <div class="modal-heading">
         <div>
           <h2>{title}</h2>
