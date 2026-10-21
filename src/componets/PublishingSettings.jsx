@@ -71,8 +71,8 @@ export default function PublishingSettings({ notify, copy, onChange }) {
   }
 
   return (
-    <section class="publishing-settings" aria-labelledby="publishing-heading">
-      <h3 id="publishing-heading">Optional live publishing</h3>
+    <details class="publishing-settings" aria-labelledby="publishing-heading">
+      <summary id="publishing-heading">Publishing settings</summary>
       <p class="form-note">Desktop only, off by default. Upload public projects after local saves, without local path fields. Your secret token stays in private app settings, outside JSON backups and exports.</p>
       {draft && (
         <fieldset disabled={busy}>
@@ -131,6 +131,6 @@ export default function PublishingSettings({ notify, copy, onChange }) {
           {error}
         </p>
       )}
-    </section>
+    </details>
   )
 }

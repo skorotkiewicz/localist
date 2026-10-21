@@ -1402,9 +1402,16 @@ details.project-description {
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 22px;
-  h3 {
+  > summary {
+    cursor: pointer;
     font-size: 14px;
-    margin-bottom: 6px;
+    font-weight: 600;
+    line-height: 24px;
+    min-height: 44px;
+    padding-block: 10px;
+  }
+  &[open] > summary {
+    margin-bottom: 8px;
   }
   fieldset {
     border: 0;
