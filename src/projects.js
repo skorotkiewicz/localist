@@ -1,3 +1,5 @@
+import { getTagColor } from './helpers/tagColor.js'
+
 export const STATUS_LABELS = {
   progress: 'In progress',
   complete: 'Completed',
@@ -89,13 +91,95 @@ export function removeUnusedCategory(projects, categories, category) {
 
 const escapeHTML = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
 
-export function generateShowcase(projects, title = 'Things I’m building') {
-  const cards = projects
-    .filter(p => p.public)
+function renderShowcaseCards(projects, escapeHTML, getTagColor, labels) {
+  return projects
     .map(
-      p =>
-        `<article><div class="meta">${escapeHTML(p.category)} <span>${STATUS_LABELS[p.status]}</span></div><h2>${escapeHTML(p.name)}</h2><p>${escapeHTML(p.description)}</p><div class="tags">${p.tags.map(t => `<small>${escapeHTML(t)}</small>`).join('')}</div>${p.repositories.length ? `<div class="repositories">${p.repositories.map(repository => `<div>${escapeHTML(repository)}</div>`).join('')}</div>` : ''}</article>`
+      p => `<article>
+        <div class="meta"><span class="category">${escapeHTML(p.category)}</span><span class="status status-${escapeHTML(p.status)}">${escapeHTML(labels[p.status])}</span></div>
+        <h2>${escapeHTML(p.name)}</h2>
+        <p class="description">${escapeHTML(p.description)}</p>
+        <div class="tags">${p.tags.map(t => `<small style="--tag-color:${getTagColor(t)}">${escapeHTML(t)}</small>`).join('')}</div>
+        ${p.repositories.length ? `<div class="repositories"><h3>Repository references</h3><ul>${p.repositories.map(repository => `<li>${escapeHTML(repository)}</li>`).join('')}</ul></div>` : ''}
+      </article>`
     )
     .join('')
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHTML(title)}</title><style>*{box-sizing:border-box}body{font:15px/1.6 system-ui,sans-serif;color:#283b32;background:#fafbf8;margin:0;padding:32px}main{max-width:1000px;margin:auto}h1{font-size:28px;letter-spacing:-1px}header p{color:#69716b}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:16px}article{padding:24px;background:white;border:1px solid #e1e6de;border-radius:12px}h2{font-size:19px;margin:14px 0 8px}article p{color:#626960;min-height:48px}.meta{font-size:12px;color:#477656;display:flex;justify-content:space-between;gap:12px}.meta span{color:#69716b}.tags{display:flex;gap:6px;flex-wrap:wrap}.repositories{font-size:12px;color:#477656;margin-top:12px;overflow-wrap:anywhere}small{background:#f2f4ee;border-radius:4px;padding:2px 7px}footer{margin-top:24px;font-size:12px;color:#69716b}</style></head><body><main><header><h1>${escapeHTML(title)}</h1><p>A few projects from my workbench.</p></header><div class="grid">${cards || '<p>No public projects yet.</p>'}</div><footer>Made with Localist</footer></main></body></html>`
+}
+
+async function connectShowcase(source, render, escape, color, labels) {
+  const grid = document.querySelector('.grid')
+  const count = document.querySelector('.project-count')
+  const status = document.querySelector('.sync-status')
+  try {
+    const response = await fetch(source, { cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer', signal: AbortSignal.timeout(8000) })
+    if (!response.ok) throw Error('Cannot load projects')
+    const data = await response.json()
+    if (!Array.isArray(data.projects) || data.projects.length > 10000) throw Error('Invalid feed')
+    const projects = data.projects.filter(p => p && p.public === true)
+    if (
+      projects.some(
+        p =>
+          !['name', 'description', 'category'].every(key => typeof p[key] === 'string') ||
+          !Object.hasOwn(labels, p.status) ||
+          !Array.isArray(p.tags) ||
+          p.tags.length > 30 ||
+          !p.tags.every(t => typeof t === 'string') ||
+          !Array.isArray(p.repositories) ||
+          !p.repositories.every(r => typeof r === 'string')
+      )
+    )
+      throw Error('Invalid projects')
+    grid.innerHTML = render(projects, escape, color, labels) || '<div class="empty">No public projects yet.</div>'
+    count.textContent = projects.length.toLocaleString('en') + ' public ' + (projects.length === 1 ? 'project' : 'projects')
+    status.textContent = ''
+  } catch {
+    grid.innerHTML = '<div class="empty">Projects unavailable.</div>'
+    count.textContent = 'Projects unavailable'
+    status.textContent = 'Could not load live projects. Refresh the page to try again.'
+  }
+}
+
+export function generateShowcase(projects, title = 'Things I’m building', liveUrl = null) {
+  if (liveUrl) {
+    const url = new URL(liveUrl)
+    const local = ['localhost', '[::1]'].includes(url.hostname) || /^127\.\d+\.\d+\.\d+$/.test(url.hostname)
+    if ((url.protocol !== 'https:' && !(url.protocol === 'http:' && local)) || url.username || url.password || url.search || url.hash || !/^\/documents\/[0-9a-f]{64}$/.test(url.pathname)) throw Error('Invalid public feed URL')
+  }
+  const publicProjects = liveUrl ? [] : projects.filter(p => p.public)
+  const cards = renderShowcaseCards(publicProjects, escapeHTML, getTagColor, STATUS_LABELS)
+  const script = liveUrl
+    ? `<script>(${connectShowcase.toString()})(${JSON.stringify(liveUrl).replaceAll('<', '\\u003c')},${renderShowcaseCards.toString()},${escapeHTML.toString()},${getTagColor.toString()},${JSON.stringify(STATUS_LABELS)})</script>`
+    : ''
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHTML(title)}</title><style>
+:root{color-scheme:light;--ink:#2e3a30;--muted:#63705f;--paper:#f8f9f4;--line:#e0e5da;--green:#386449}
+*{box-sizing:border-box}
+body{font:15px/1.65 system-ui,sans-serif;color:var(--ink);background:var(--paper);margin:0;padding:clamp(20px,4vw,48px)}
+main{max-width:1040px;margin:auto}
+header{padding:12px 0 28px;margin-bottom:28px;border-bottom:1px solid var(--line)}
+.eyebrow{font-size:11px;font-weight:650;letter-spacing:.16em;color:var(--green);margin:0 0 12px}
+h1{font-size:clamp(30px,5vw,48px);line-height:1.15;font-weight:600;letter-spacing:-.04em;margin:0 0 16px;overflow-wrap:anywhere}
+.intro{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.intro p{margin:0;color:var(--muted)}
+.project-count{font-size:12px;color:var(--green);padding:5px 10px;border:1px solid var(--line);border-radius:6px;background:#eef2e9}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:20px}
+article{display:flex;flex-direction:column;min-width:0;padding:24px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 3px 12px #263b2805}
+.meta{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;font-size:12px}
+.category{color:var(--muted);overflow-wrap:anywhere;padding-top:3px}
+.status{display:inline-flex;align-items:center;gap:6px;flex-shrink:0;font-size:11px;font-weight:550;padding:3px 8px;border-radius:5px;white-space:nowrap}
+.status::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor}
+.status-progress{color:#7c5816;background:#fbf0d9}
+.status-complete{color:#365c40;background:#edf3e9}
+.status-archived{color:#596255;background:#eef0eb}
+h2{font-size:21px;line-height:1.3;font-weight:600;letter-spacing:-.025em;margin:18px 0 10px;overflow-wrap:anywhere}
+.description{color:var(--muted);margin:0 0 16px;white-space:pre-line;overflow-wrap:anywhere}
+.description:empty,.tags:empty{display:none}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px}
+small{font-size:12px;line-height:1.5;color:var(--tag-color);background:#f4f5ef;background:color-mix(in srgb,var(--tag-color) 8%,white);border:1px solid var(--line);border-color:color-mix(in srgb,var(--tag-color) 20%,white);border-radius:5px;padding:3px 8px;overflow-wrap:anywhere;min-width:0;max-width:100%}
+.repositories{margin-top:auto;padding-top:20px;font-size:12px;overflow-wrap:anywhere}
+.repositories h3{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.repositories ul{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.repositories li{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--green);padding:9px 0;border-bottom:1px solid var(--line);white-space:pre-wrap}
+.empty{padding:40px 24px;text-align:center;border:1px dashed var(--line);border-radius:10px;color:var(--muted);grid-column:1/-1}
+footer{margin-top:28px;padding-top:18px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+@media(max-width:480px){article{padding:20px}.grid{gap:14px}header{padding-top:4px}}
+</style></head><body><main><header><p class="eyebrow">PUBLIC WORKBENCH</p><h1>${escapeHTML(title)}</h1><div class="intro"><p>A few projects from my workbench.</p><span class="project-count">${liveUrl ? 'Loading projects…' : `${publicProjects.length.toLocaleString('en')} public ${publicProjects.length === 1 ? 'project' : 'projects'}`}</span></div></header>${liveUrl ? '<p class="sync-status" role="status">Loading live projects…</p>' : ''}<div class="grid">${cards || `<div class="empty">${liveUrl ? 'Loading live projects…' : 'No public projects yet.'}</div>`}</div><footer>Made with Localist</footer></main>${script}</body></html>`
 }

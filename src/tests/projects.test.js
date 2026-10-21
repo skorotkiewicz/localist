@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { filterProjects, generateShowcase, removeArchivedProject, removeUnusedCategory, validateIndex, validateProjects } from '../projects.js'
 import { exportJSON, importJSON } from '../helpers/json.js'
+import { getTagColor } from '../helpers/tagColor.js'
 
 const project = {
   id: 'test-1',
@@ -120,6 +121,23 @@ test('showcase content is escaped against HTML injection', () => {
   assert.ok(html.includes('&lt;script&gt;'))
   assert.ok(html.includes('&lt;b&gt;Custom&lt;/b&gt;'))
   assert.ok(generateShowcase([]).includes('No public projects yet.'))
+})
+
+test('showcase uses public-only counts, neutral categories, colored tags, and no external resources', () => {
+  const html = generateShowcase([
+    { ...project, tags: ['Public tag'] },
+    { ...project, id: 'complete', status: 'complete' },
+    { ...project, id: 'archived', status: 'archived' },
+    { ...project, id: 'private', name: 'PRIVATE_PROJECT', public: false }
+  ])
+  assert.ok(html.includes('3 public projects'))
+  assert.ok(!html.includes('PRIVATE_PROJECT'))
+  assert.ok(html.includes('<span class="category">Custom category</span>'))
+  assert.ok(html.includes(`style="--tag-color:${getTagColor('Public tag')}"`))
+  for (const status of ['progress', 'complete', 'archived']) assert.ok(html.includes(`class="status status-${status}"`))
+  assert.doesNotMatch(html, /<(script|link|img|iframe)\b/i)
+  assert.ok(generateShowcase([project]).includes('1 public project</span>'))
+  assert.ok(generateShowcase([{ ...project, public: false }]).includes('0 public projects'))
 })
 
 test('creation sorting is newest first while last updated remains the default', () => {

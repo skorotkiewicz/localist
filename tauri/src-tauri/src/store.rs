@@ -37,6 +37,23 @@ fn folder_icon() -> String {
 }
 
 impl Index {
+    pub fn public_snapshot(&self) -> serde_json::Value {
+        let mut seen = HashSet::new();
+        let categories: Vec<_> = self
+            .projects
+            .iter()
+            .filter(|p| p.public)
+            .map(|p| &p.category)
+            .filter(|category| seen.insert(*category))
+            .collect();
+        let projects: Vec<_> = self.projects.iter().filter(|p| p.public).map(|p| serde_json::json!({
+            "id": p.id, "name": p.name, "description": p.description, "category": p.category,
+            "status": p.status, "public": true, "tags": p.tags, "repositories": p.repositories,
+            "createdAt": p.created_at, "updatedAt": p.updated_at, "icon": p.icon
+        })).collect();
+        serde_json::json!({ "projects": projects, "categories": categories })
+    }
+
     fn validate(mut self) -> Result<Self, String> {
         let fits = |text: &str, max| text.encode_utf16().count() <= max;
         let valid_date = |text: &str| {
@@ -134,6 +151,26 @@ mod tests {
             "createdAt": "2026-04-01T00:00:00Z", "updatedAt": "2026-05-01T00:00:00Z"
         }], "categories": ["Custom"]}))
         .unwrap()
+    }
+
+    #[test]
+    fn public_snapshots_omit_private_records_paths_and_unused_categories() {
+        let mut index = sample();
+        index.projects[0].public = true;
+        index.projects[0].category = "Shared".into();
+        let mut hidden = sample();
+        hidden.projects[0].id = "hidden-record".into();
+        hidden.projects[0].category = "HiddenCategory".into();
+        index.projects.extend(hidden.projects);
+        index.categories = vec!["Shared".into(), "HiddenCategory".into(), "Unused".into()];
+        let original = serde_json::to_string(&index).unwrap();
+        let snapshot = index.public_snapshot();
+        assert_eq!(snapshot["projects"].as_array().unwrap().len(), 1);
+        assert!(snapshot["projects"][0].get("path").is_none());
+        assert_eq!(snapshot["categories"], json!(["Shared"]));
+        assert!(!snapshot.to_string().contains("hidden-record"));
+        assert!(!snapshot.to_string().contains("/private/project"));
+        assert_eq!(serde_json::to_string(&index).unwrap(), original);
     }
 
     #[test]
