@@ -1,0 +1,24 @@
+[Unit]
+Description=Localist publishing server
+After=network.target
+
+[Service]
+Type=simple
+DynamicUser=yes
+StateDirectory=localist-publish
+StateDirectoryMode=0700
+Environment=HOST=127.0.0.1
+Environment=PORT=8080
+Environment=MODE=open
+Environment=DATA_DIR=/var/lib/localist-publish
+ExecStart=/usr/local/bin/localist-publish
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=10s
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

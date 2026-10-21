@@ -137,6 +137,44 @@ Missing/invalid credentials return 401; another owner's token returns 403. Inval
 The future Localist integration must filter private projects and omit local paths before upload.
 Never upload the complete private index and rely on the public viewer to hide fields.
 
+## systemd
+
+From this directory, after building `publish`:
+
+```sh
+sudo install -m 0755 publish /usr/local/bin/localist-publish
+sudo install -m 0644 localist-publish.service /etc/systemd/system/localist-publish.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now localist-publish.service
+```
+
+The service runs as a systemd-managed unprivileged user, restarts on failure, and listens on
+`127.0.0.1:8080`. systemd creates persistent storage at `/var/lib/localist-publish` with private
+permissions. System files are read-only, and home directories are hidden from the service.
+
+The service does not copy your existing `./data` store. Existing tokens require their documents
+in the service's data directory; arrange migration before switching if you need to retain them.
+
+To change the mode or other environment settings:
+
+```sh
+sudo systemctl edit localist-publish.service
+```
+
+Add a drop-in such as:
+
+```ini
+[Service]
+Environment=MODE=closed
+```
+
+Then apply it and inspect the logs:
+
+```sh
+sudo systemctl restart localist-publish.service
+sudo journalctl -u localist-publish.service -f
+```
+
 ## HTTPS on a VPS
 
 Keep the loopback bind, run as an unprivileged user, and put TLS in front of the server:
