@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
-import { execFileSync } from 'node:child_process'
+import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import test from 'node:test'
 import { generateToken, isValidToken, publicId } from './token.mjs'
@@ -39,7 +39,30 @@ test('generated tokens validate, differ, and reject altered checksums', async ()
   await assert.rejects(publicId('invalid'))
 })
 
-test('CLI prints a valid token from this ES module repository', async () => {
-  const output = execFileSync(process.execPath, [fileURLToPath(new URL('./token.mjs', import.meta.url))], { encoding: 'utf8' })
-  assert.equal(await isValidToken(output.trim()), true)
+test('CLI generates, checks, derives IDs, and rejects invalid arguments', async () => {
+  const run = (...args) => spawnSync(process.execPath, [fileURLToPath(new URL('./token.mjs', import.meta.url)), ...args], { encoding: 'utf8' })
+  for (const args of [[], ['generate']]) {
+    const result = run(...args)
+    assert.equal(result.status, 0)
+    assert.equal(result.stderr, '')
+    assert.equal(await isValidToken(result.stdout.trim()), true)
+  }
+  const usage = 'Usage: node token.mjs generate | check <token> | id <token>\n'
+  for (const [args, status, stdout, stderr] of [
+    [['check', fixture], 0, 'valid\n', ''],
+    [['check', 'invalid'], 1, 'invalid\n', ''],
+    [['id', fixture], 0, id + '\n', ''],
+    [['id', 'invalid'], 1, '', 'Invalid publishing token\n'],
+    [['check'], 1, '', usage],
+    [['id'], 1, '', usage],
+    [['generate', 'extra'], 1, '', usage],
+    [['check', fixture, 'extra'], 1, '', usage],
+    [['id', fixture, 'extra'], 1, '', usage],
+    [['unknown'], 1, '', usage]
+  ]) {
+    const result = run(...args)
+    assert.equal(result.status, status)
+    assert.equal(result.stdout, stdout)
+    assert.equal(result.stderr, stderr)
+  }
 })

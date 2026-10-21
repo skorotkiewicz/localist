@@ -27,4 +27,22 @@ export async function publicId(token) {
   return Array.from(await digest(token), byte => byte.toString(16).padStart(2, '0')).join('')
 }
 
-if (import.meta.main) console.log(await generateToken())
+if (import.meta.main) {
+  const [command = 'generate', ...args] = process.argv.slice(2)
+  try {
+    if (command === 'generate' && args.length === 0) {
+      console.log(await generateToken())
+    } else if (command === 'check' && args.length === 1) {
+      const valid = await isValidToken(args[0])
+      console.log(valid ? 'valid' : 'invalid')
+      process.exitCode = valid ? 0 : 1
+    } else if (command === 'id' && args.length === 1) {
+      console.log(await publicId(args[0]))
+    } else {
+      throw new Error('Usage: node token.mjs generate | check <token> | id <token>')
+    }
+  } catch (error) {
+    console.error(error.message)
+    process.exitCode = 1
+  }
+}

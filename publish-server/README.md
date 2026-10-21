@@ -17,8 +17,16 @@ Its command-line mode requires Node 24.2 or newer:
 
 ```sh
 node --test token.test.mjs
-node token.mjs
+node token.mjs generate
+node token.mjs check "$TOKEN"
+node token.mjs id "$TOKEN"
 ```
+
+`generate` prints a fresh token. With no arguments, the helper also generates a token.
+`check` prints `valid` or `invalid`, exiting with status 1 for an invalid token.
+It checks the token format and checksum, not whether the server has registered the token.
+`id` prints the public ID, rejecting invalid tokens. Missing, extra, or unknown arguments exit 1.
+Avoid pasting real tokens into shell history; command-line arguments can also appear in process lists.
 
 `token.mjs` also exports `generateToken()`, `isValidToken(token)`, and `publicId(token)` for browsers.
 Browser hashing requires a secure context, normally HTTPS or localhost.
