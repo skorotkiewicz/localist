@@ -37,7 +37,7 @@ export const publishing = {
 `
 
 // The Rust tests verify snapshot privacy and real HTTP; this browser test checks UI/save behavior.
-test('desktop publishing is opt-in and failed uploads do not fail local saves', { skip: !existsSync('/usr/lib/chromium/chromium') }, async t => {
+test('desktop publishing skips private-only saves and preserves local changes on upload failure', { skip: !existsSync('/usr/lib/chromium/chromium') }, async t => {
   const html = `<!doctype html><link rel="stylesheet" href="/src/index.css"><link rel="stylesheet" href="/src/app.css"><div id="root"></div><script>
 const report = message => { const output = document.createElement('pre'); output.id = 'publishing-check-result'; output.textContent = message; document.body.append(output) }
 window.addEventListener('error', event => report(event.message || 'Module loading failed'))
@@ -84,8 +84,8 @@ try {
   check(serverInput().value === 'http://127.0.0.1:8080' && button('Save publishing settings').disabled, 'Publishing defaults or save state are incorrect')
   check(window.uploads === 0 && window.events.length === 0, 'Opening the dialog uploaded or saved anything')
   check(await window.index.persist([]), 'Disabled publishing blocked a local save')
-  await wait(() => window.events.includes('auto-publish'))
-  check(window.uploads === 0, 'Disabled publishing uploaded data')
+  await new Promise(resolve => setTimeout(resolve, 20))
+  check(window.uploads === 0 && window.events.every(event => event === 'local-save'), 'Unchanged public data triggered publishing')
   checkbox().checked = true
   checkbox().dispatchEvent(new Event('change', { bubbles: true }))
   await wait(() => !button('Save publishing settings').disabled)
@@ -115,15 +115,46 @@ try {
   serverInput().value = 'http://127.0.0.1:8080'
   serverInput().dispatchEvent(new Event('input', { bubbles: true }))
   await wait(() => button('Save publishing settings').disabled && !button('Publish now').disabled)
-  const project = { id: 'test', name: 'Local test', path: '/private', category: 'Test', description: '', status: 'progress', public: false, tags: [], repositories: [], createdAt: '2026-01-01', updatedAt: '2026-01-01', icon: 'folder' }
+  const project = { id: 'test', name: 'Public test', path: '/private', category: 'Test', description: '', status: 'progress', public: true, tags: [], repositories: [], createdAt: '2026-01-01', updatedAt: '2026-01-01', icon: 'folder' }
+  const privateProject = { ...project, id: 'private', name: 'Private test', category: 'Private only', public: false }
+  const checkPrivateSaves = async publicProjects => {
+    const uploads = window.uploads
+    const messages = window.messages.length
+    window.events.length = 0
+    window.failPublish = true
+    for (const next of [
+      [...publicProjects, privateProject],
+      [...publicProjects, { ...privateProject, name: 'Edited private project', tags: ['Private tag'] }],
+      [privateProject, ...publicProjects],
+      publicProjects,
+      publicProjects.map(p => ({ ...p, path: '/changed/local/path' })),
+      publicProjects
+    ]) check(await window.index.persist(next), 'Private-only save failed with an unreachable server')
+    check(await window.index.persist(publicProjects, ['Unused category']), 'Unused category save failed')
+    check(await window.index.persist(publicProjects, []), 'Unused category removal failed')
+    await new Promise(resolve => setTimeout(resolve, 20))
+    check(window.uploads === uploads && window.events.every(event => event === 'local-save'), 'Private-only or unchanged public data triggered publishing')
+    check(window.messages.length === messages, 'Private-only changes showed a publishing warning')
+    window.failPublish = false
+  }
+  await checkPrivateSaves([])
   window.events.length = 0
   check(await window.index.persist([project]), 'Enabled publishing blocked a local save')
   await wait(() => window.uploads === 3)
   check(window.events[0] === 'local-save' && window.events[1] === 'auto-publish', 'Published before saving locally')
+  await checkPrivateSaves([project])
+  const editedPublic = { ...project, name: 'Edited public project', category: 'Shared category', status: 'complete', updatedAt: '2026-01-02' }
+  const persist = window.index.persist
+  for (const next of [[editedPublic], [{ ...editedPublic, public: false }], [editedPublic], [], [project]]) {
+    const uploads = window.uploads
+    check(await persist(next), 'Public change failed to save locally through a retained handler')
+    await wait(() => window.uploads === uploads + 1)
+  }
+  const uploadsBeforeFailures = window.uploads
   window.failSave = true
   check(!(await window.index.persist([])), 'Failed local save reported success')
   await new Promise(resolve => setTimeout(resolve, 20))
-  check(window.uploads === 3 && window.saved.projects.length === 1, 'Failed local save uploaded or changed data')
+  check(window.uploads === uploadsBeforeFailures && window.saved.projects.length === 1, 'Failed local save uploaded or changed data')
   window.failSave = false; window.failPublish = true
   check(await window.index.persist([]), 'Publishing failure failed a successful local save')
   notify('Changes saved')

@@ -2,12 +2,15 @@ import { loadIndex, saveIndex, publishing } from '#platform'
 import { useEffect, useRef, useState } from 'preact/hooks'
 import { STATUS_LABELS, removeUnusedCategory, validateIndex } from '../projects'
 
+const publicSnapshot = projects => JSON.stringify(projects.filter(p => p.public).map(({ path, ...project }) => project))
+
 export default function useProjectIndex(notify) {
   const [loadError, setLoadError] = useState('')
   const [projects, setProjects] = useState([])
   const [loaded, setLoaded] = useState(false)
   const [saving, setSaving] = useState(false)
   const savingRef = useRef(false)
+  const savedPublicSnapshot = useRef(null)
   const [extraCategories, setExtraCategories] = useState([])
   const categories = [...new Set([...extraCategories, ...projects.map(p => p.category)])]
   const counts = {
@@ -23,6 +26,7 @@ export default function useProjectIndex(notify) {
       try {
         const index = validateIndex(await loadIndex(controller.signal))
         if (cancelled) return
+        savedPublicSnapshot.current = publishing ? publicSnapshot(index.projects) : null
         setProjects(index.projects)
         setExtraCategories(index.categories)
         setLoaded(true)
@@ -51,9 +55,12 @@ export default function useProjectIndex(notify) {
     try {
       const data = await saveIndex(validateIndex({ projects: next, categories: nextCategories }))
       const index = validateIndex(data)
+      const snapshot = publishing ? publicSnapshot(index.projects) : null
+      const publicChanged = snapshot !== savedPublicSnapshot.current
+      savedPublicSnapshot.current = snapshot
       setProjects(index.projects)
       setExtraCategories(index.categories)
-      if (publishing) {
+      if (publishing && publicChanged) {
         Promise.resolve()
           .then(() => publishing.publish(true))
           .catch(error => {

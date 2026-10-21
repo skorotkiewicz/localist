@@ -66,8 +66,10 @@ native project index. On Unix this file is owner-readable/writable only. It is n
 included in project JSON backups, public snapshots, or HTML exports. Keep this settings file safe:
 losing the token loses write access to the existing public URL.
 
-Successful local saves trigger background publishing. **Publish now** uploads the currently saved
-index without changing it. Native code includes only public projects, omits every `path` field,
+In automatic mode, successful local saves trigger background publishing only when the public
+snapshot changes. Private-only edits and unused-category changes stay local. Making a public project
+private still publishes the removal. **Publish now** uploads the currently saved index without changing
+it. Native code includes only public projects, omits every `path` field,
 and derives categories only from public records. Other fields on public projects, including notes
 and repository references, are public. Nothing uploads when you only save publishing settings.
 Publishing errors show a warning and never undo a local save. Until a successful upload, the
