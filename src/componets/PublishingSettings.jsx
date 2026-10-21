@@ -99,7 +99,7 @@ export default function PublishingSettings({ notify, copy, onChange }) {
               }}
               spellCheck={false}
             />
-            <small>Use http://127.0.0.1:8080 for local testing. Other servers require HTTPS.</small>
+            {/* <small>Use http://127.0.0.1:8080 for local testing. Other servers require HTTPS.</small>*/}
           </label>
           <div class="publishing-actions">
             <button type="button" class="button" disabled={!changed} onClick={save}>
