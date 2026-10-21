@@ -89,13 +89,56 @@ jobs:
           args: ${{ matrix.args }} -- --locked
           tagName: ${{ github.ref_name }}
           releaseName: Localist ${{ github.ref_name }}
-          releaseBody: Download the installer for your platform below. These builds are unsigned.
+          releaseBody: Download the installer for your platform or a standalone Linux publishing server below. These builds are unsigned.
           releaseDraft: true
           prerelease: ${{ steps.version.outputs.prerelease == 'true' }}
           uploadUpdaterJson: false
 
-  publish:
+  build-server:
+    name: Build standalone publishing server
     needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: bash
+        working-directory: publish-server
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: stable
+          cache: false
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Test publishing server and token helper
+        run: |
+          go test -race ./...
+          node --test token.test.mjs
+
+      - name: Build standalone Linux binaries
+        env:
+          CGO_ENABLED: '0'
+          GOOS: linux
+        run: |
+          GOARCH=amd64 go build -trimpath -o localist-publish-linux-amd64 .
+          GOARCH=arm64 go build -trimpath -o localist-publish-linux-arm64 .
+
+      - name: Upload server binaries to draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release upload "$GITHUB_REF_NAME" localist-publish-linux-amd64 localist-publish-linux-arm64 --clobber
+
+  publish:
+    needs: [build, build-server]
     runs-on: ubuntu-latest
     permissions:
       contents: write

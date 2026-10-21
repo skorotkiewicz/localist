@@ -9,6 +9,8 @@ Use a supported Go release, at least Go 1.22. Run from this directory:
 
 ```sh
 go build -o publish .
+# static build
+CGO_ENABLED=0 go build -trimpath -o publish .
 go test -race ./...
 ```
 
