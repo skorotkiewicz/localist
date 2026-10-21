@@ -168,6 +168,7 @@ func (s *store) put(id string, body []byte, create bool) error {
 
 type server struct {
 	store       *store
+	closed      bool
 	rateMu      sync.Mutex
 	window      time.Time
 	attempts    int64
@@ -299,6 +300,10 @@ func (s *server) handler() http.Handler {
 			return
 		}
 		create := r.Method == http.MethodPost
+		if create && s.closed {
+			fail(w, http.StatusForbidden, "publishing is closed to new tokens; existing tokens can update with PUT")
+			return
+		}
 		if create && !s.allowCreate(time.Now()) {
 			w.Header().Set("Retry-After", "60")
 			fail(w, http.StatusTooManyRequests, "creation rate limit reached; retry later")
@@ -365,11 +370,15 @@ func main() {
 	host := flag.String("host", envOr("HOST", "127.0.0.1"), "bind address")
 	port := flag.String("port", envOr("PORT", "8080"), "TCP port")
 	dir := flag.String("data", envOr("DATA_DIR", "./data"), "data directory, owned by one server process")
+	mode := flag.String("mode", envOr("MODE", "open"), "publishing mode: open or closed")
 	maxBytes := flag.String("max-bytes", envOr("MAX_BYTES", "1048576"), "maximum document bytes")
 	maxTotal := flag.String("max-total-bytes", envOr("MAX_TOTAL_BYTES", "268435456"), "maximum committed document bytes")
 	maxDocs := flag.String("max-documents", envOr("MAX_DOCUMENTS", "1000"), "maximum document count")
 	creates := flag.String("creates-per-minute", envOr("CREATES_PER_MINUTE", "30"), "global POST attempt limit per minute")
 	flag.Parse()
+	if *mode != "open" && *mode != "closed" {
+		log.Fatal("MODE must be open or closed")
+	}
 	if *host == "" || positive("PORT", *port) > 65535 {
 		log.Fatal("invalid host or port")
 	}
@@ -377,7 +386,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	app := &server{store: store, createLimit: positive("CREATES_PER_MINUTE", *creates)}
+	app := &server{store: store, closed: *mode == "closed", createLimit: positive("CREATES_PER_MINUTE", *creates)}
 	srv := &http.Server{
 		Addr: net.JoinHostPort(*host, *port), Handler: app.handler(),
 		ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second,
@@ -394,7 +403,7 @@ func main() {
 			_ = srv.Close()
 		}
 	}()
-	log.Printf("listening on http://%s", srv.Addr)
+	log.Printf("listening on http://%s (%s mode)", srv.Addr, *mode)
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
 	}

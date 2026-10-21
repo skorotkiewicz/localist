@@ -95,6 +95,55 @@ func TestPublishReadUpdateAndRestart(t *testing.T) {
 	}
 }
 
+func TestClosedMode(t *testing.T) {
+	s := testServer(t)
+	s.closed = true
+	if got := request(s, "POST", "/documents", fixtureToken, "{}"); got.Code != 403 || s.store.count != 0 {
+		t.Fatalf("closed empty server accepted a new publisher: %d %s", got.Code, got.Body)
+	}
+	s.closed = false
+	if got := request(s, "POST", "/documents", fixtureToken, `{"original":true}`); got.Code != 201 {
+		t.Fatalf("open server rejected a new publisher: %d %s", got.Code, got.Body)
+	}
+	reopened, err := openStore(s.store.dir, 128, 512, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s = &server{store: reopened, closed: true, createLimit: 1, attempts: 1, window: time.Now()}
+	other := anotherToken()
+	cases := []struct {
+		method, path, token string
+		status              int
+	}{
+		{"POST", "/documents", other, 403},
+		{"POST", "/documents", fixtureToken, 403},
+		{"POST", "/documents", "", 401},
+		{"PUT", "/documents", other, 404},
+		{"PUT", "/documents/" + publicID(other), other, 404},
+		{"PUT", "/documents/" + fixtureID, other, 403},
+	}
+	for _, tc := range cases {
+		if got := request(s, tc.method, tc.path, tc.token, "{}"); got.Code != tc.status {
+			t.Fatalf("%s %s: expected %d, got %d: %s", tc.method, tc.path, tc.status, got.Code, got.Body)
+		}
+	}
+	if s.store.count != 1 || s.attempts != 1 {
+		t.Fatal("closed mode created a document or consumed the creation rate limit")
+	}
+	url := "/documents/" + fixtureID
+	if got := request(s, "GET", url, "", ""); got.Code != 200 || got.Body.String() != `{"original":true}` {
+		t.Fatal("closed mode blocked public reads or changed the existing document")
+	}
+	for _, path := range []string{"/documents", url} {
+		if got := request(s, "PUT", path, fixtureToken, `{"updated":true}`); got.Code != 200 {
+			t.Fatalf("closed mode rejected an existing owner's update: %d %s", got.Code, got.Body)
+		}
+	}
+	if got := request(s, "GET", url, "", ""); got.Code != 200 || got.Body.String() != `{"updated":true}` {
+		t.Fatal("existing owner's update was not published")
+	}
+}
+
 func TestRejectedUpdatesKeepPreviousDocument(t *testing.T) {
 	s := testServer(t)
 	request(s, "POST", "/documents", fixtureToken, `{"original":true}`)

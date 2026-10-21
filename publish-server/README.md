@@ -36,10 +36,24 @@ Flags override environment variables. Defaults:
 | `HOST` | `-host` | `127.0.0.1` |
 | `PORT` | `-port` | `8080` |
 | `DATA_DIR` | `-data` | `./data` |
+| `MODE` | `-mode` | `open` |
 | `MAX_BYTES` | `-max-bytes` | 1,048,576 bytes per document |
 | `MAX_TOTAL_BYTES` | `-max-total-bytes` | 268,435,456 committed document bytes |
 | `MAX_DOCUMENTS` | `-max-documents` | 1,000 documents |
 | `CREATES_PER_MINUTE` | `-creates-per-minute` | 30 authenticated POST attempts, globally |
+
+`open` keeps the current behavior: new tokens can create documents, and existing owners can update.
+`closed` returns 403 for authenticated `POST /documents` requests. Existing owners can still update
+using PUT, and public reads are unchanged. A token is existing only if its document is already in
+`DATA_DIR`; generating a token without publishing does not register it. Other mode values stop startup.
+
+To close registration, restart with the same data directory:
+
+```sh
+./publish -mode closed -data ./data
+```
+
+Use `MODE=closed` instead of the flag if preferred. Restart with `-mode open` to allow new publishers.
 
 Limits must be positive. A full store returns 507; the creation rate limit returns 429.
 The global creation limit does not block updates. It resets after one minute or a server restart.
@@ -87,7 +101,8 @@ curl --fail-with-body --request POST http://127.0.0.1:8080/documents \
 ```
 
 Creation returns 201 with `{"id":"...","url":"/documents/..."}` and a Location header.
-POST with an existing token returns 409. Replace your document without needing to retain its ID:
+In open mode, POST with an existing token returns 409.
+Replace your document without needing to retain its ID:
 
 ```sh
 curl --fail-with-body --request PUT http://127.0.0.1:8080/documents \
@@ -98,7 +113,7 @@ curl --fail-with-body --request PUT http://127.0.0.1:8080/documents \
 
 | Request | Authentication | Result |
 | --- | --- | --- |
-| `POST /documents` | Bearer | Create once |
+| `POST /documents` | Bearer | Create once, open mode only |
 | `GET /documents` | Bearer | Read your document; Location gives its public URL |
 | `PUT /documents` | Bearer | Replace your document |
 | `GET /documents/{id}` | None | Read original JSON, without a metadata wrapper |
