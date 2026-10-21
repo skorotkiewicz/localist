@@ -56,6 +56,11 @@ publishing settings. It is off by default and unavailable in web mode. For local
 server in `publish-server/` and use `http://127.0.0.1:8080` as the server URL. Other servers must use
 HTTPS. The app rejects URL credentials, paths, queries, and redirects to avoid leaking its token.
 
+An open hosted server is available at [yap.sekor.eu.org](https://yap.sekor.eu.org).
+Set **Publishing server URL** to `https://yap.sekor.eu.org` to use it without hosting your own server.
+It accepts new publishers; each token can update only its own document. Uploaded JSON is public,
+and your publishing token must stay private.
+
 The app generates one token using OS randomness and retains it in `publishing.json` beside the
 native project index. On Unix this file is owner-readable/writable only. It is not encrypted or
 included in project JSON backups, public snapshots, or HTML exports. Keep this settings file safe:

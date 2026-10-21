@@ -3,6 +3,17 @@
 A standalone Go server for anonymous, token-owned public JSON documents. Standard library only.
 Localist integration is separate. Versions 1 and 2 and their data are not modified or migrated.
 
+## Open hosted server
+
+[Yap](https://yap.sekor.eu.org) is an open instance accepting new publishers.
+Use `https://yap.sekor.eu.org` as the server URL in Localist, or as the base URL for the API below.
+Create a document with your own token using POST, then reuse that token for PUT updates.
+Open registration does not let other tokens update your document.
+Public feeds use `https://yap.sekor.eu.org/documents/{id}` and need no token to read.
+
+Everything uploaded is public. Keep your publishing token private and do not upload private data.
+You can still self-host using the instructions below.
+
 ## Build and test
 
 Use a supported Go release, at least Go 1.22. Run from this directory:
