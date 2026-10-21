@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks'
+import { useEffect, useState } from 'preact/hooks'
 import { publishing } from '#platform'
 import PublishingSettings from './PublishingSettings'
 import { generateShowcase } from '../projects'
@@ -8,13 +8,18 @@ import Modal from './Modal'
 
 export default function ShowcaseDialog({ open, projects, notify, copy, close }) {
   const [showcaseTitle, setShowcaseTitle] = useState('Things I’m building')
+  const [publishSettings, setPublishSettings] = useState(null)
+  useEffect(() => {
+    if (!open) setPublishSettings(null)
+  }, [open])
   if (!open) return null
   const publicCount = projects.filter(p => p.public).length
-  const html = generateShowcase(projects, showcaseTitle)
+  const liveUrl = publishSettings?.enabled ? publishSettings.publicUrl : null
+  const html = generateShowcase(projects, showcaseTitle, liveUrl)
 
   return (
     <Modal title="A little corner of the internet." subtitle={`${publicCount} public projects. No private projects or local paths, ever.`} close={close} wide>
-      {publishing && <PublishingSettings notify={notify} copy={copy} />}
+      {publishing && <PublishingSettings notify={notify} onChange={setPublishSettings} />}
       <label>
         Showcase title
         <input value={showcaseTitle} onInput={e => setShowcaseTitle(e.target.value)} maxLength={150} />
@@ -26,10 +31,14 @@ export default function ShowcaseDialog({ open, projects, notify, copy, close }) 
           Public projects only
         </span>
       </div>
-      <iframe class="showcase-preview" title="Public project showcase preview" srcDoc={html} sandbox="" />
+      <iframe class="showcase-preview" title="Public project showcase preview" srcDoc={html} sandbox={liveUrl ? 'allow-scripts' : ''} />
       <div class="notice">
         <Icon name="code" size={19} />
-        <p>Download the HTML and host it on your website. Then copy the embed code. Re-export when your projects change.</p>
+        <p>
+          {liveUrl
+            ? 'This showcase loads your published projects when opened. Refresh the page to load changes. Export it once, then host it on your website or open the file.'
+            : 'Download the HTML and host it on your website. Then copy the embed code. Re-export when your projects change.'}
+        </p>
       </div>
       <div class="embed-code">
         <code>{'<iframe src="/showcase.html" title="My projects" width="100%" height="600" style="border:0" loading="lazy"></iframe>'}</code>
@@ -44,6 +53,7 @@ export default function ShowcaseDialog({ open, projects, notify, copy, close }) 
         </span>
         <button
           class="button primary"
+          disabled={publishing && !publishSettings}
           onClick={async () => {
             try {
               const path = await download(html, 'showcase.html', 'text/html')

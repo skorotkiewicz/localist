@@ -91,12 +91,11 @@ export function removeUnusedCategory(projects, categories, category) {
 
 const escapeHTML = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
 
-export function generateShowcase(projects, title = 'Things I’m building') {
-  const publicProjects = projects.filter(p => p.public)
-  const cards = publicProjects
+function renderShowcaseCards(projects, escapeHTML, getTagColor, labels) {
+  return projects
     .map(
       p => `<article>
-        <div class="meta"><span class="category">${escapeHTML(p.category)}</span><span class="status status-${escapeHTML(p.status)}">${escapeHTML(STATUS_LABELS[p.status])}</span></div>
+        <div class="meta"><span class="category">${escapeHTML(p.category)}</span><span class="status status-${escapeHTML(p.status)}">${escapeHTML(labels[p.status])}</span></div>
         <h2>${escapeHTML(p.name)}</h2>
         <p class="description">${escapeHTML(p.description)}</p>
         <div class="tags">${p.tags.map(t => `<small style="--tag-color:${getTagColor(t)}">${escapeHTML(t)}</small>`).join('')}</div>
@@ -104,6 +103,52 @@ export function generateShowcase(projects, title = 'Things I’m building') {
       </article>`
     )
     .join('')
+}
+
+async function connectShowcase(source, render, escape, color, labels) {
+  const grid = document.querySelector('.grid')
+  const count = document.querySelector('.project-count')
+  const status = document.querySelector('.sync-status')
+  try {
+    const response = await fetch(source, { cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer', signal: AbortSignal.timeout(8000) })
+    if (!response.ok) throw Error('Cannot load projects')
+    const data = await response.json()
+    if (!Array.isArray(data.projects) || data.projects.length > 10000) throw Error('Invalid feed')
+    const projects = data.projects.filter(p => p && p.public === true)
+    if (
+      projects.some(
+        p =>
+          !['name', 'description', 'category'].every(key => typeof p[key] === 'string') ||
+          !Object.hasOwn(labels, p.status) ||
+          !Array.isArray(p.tags) ||
+          p.tags.length > 30 ||
+          !p.tags.every(t => typeof t === 'string') ||
+          !Array.isArray(p.repositories) ||
+          !p.repositories.every(r => typeof r === 'string')
+      )
+    )
+      throw Error('Invalid projects')
+    grid.innerHTML = render(projects, escape, color, labels) || '<div class="empty">No public projects yet.</div>'
+    count.textContent = projects.length.toLocaleString('en') + ' public ' + (projects.length === 1 ? 'project' : 'projects')
+    status.textContent = ''
+  } catch {
+    grid.innerHTML = '<div class="empty">Projects unavailable.</div>'
+    count.textContent = 'Projects unavailable'
+    status.textContent = 'Could not load live projects. Refresh the page to try again.'
+  }
+}
+
+export function generateShowcase(projects, title = 'Things I’m building', liveUrl = null) {
+  if (liveUrl) {
+    const url = new URL(liveUrl)
+    const local = ['localhost', '[::1]'].includes(url.hostname) || /^127\.\d+\.\d+\.\d+$/.test(url.hostname)
+    if ((url.protocol !== 'https:' && !(url.protocol === 'http:' && local)) || url.username || url.password || url.search || url.hash || !/^\/documents\/[0-9a-f]{64}$/.test(url.pathname)) throw Error('Invalid public feed URL')
+  }
+  const publicProjects = liveUrl ? [] : projects.filter(p => p.public)
+  const cards = renderShowcaseCards(publicProjects, escapeHTML, getTagColor, STATUS_LABELS)
+  const script = liveUrl
+    ? `<script>(${connectShowcase.toString()})(${JSON.stringify(liveUrl).replaceAll('<', '\\u003c')},${renderShowcaseCards.toString()},${escapeHTML.toString()},${getTagColor.toString()},${JSON.stringify(STATUS_LABELS)})</script>`
+    : ''
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHTML(title)}</title><style>
 :root{color-scheme:light;--ink:#2e3a30;--muted:#63705f;--paper:#f8f9f4;--line:#e0e5da;--green:#386449}
 *{box-sizing:border-box}
@@ -136,5 +181,5 @@ small{font-size:12px;line-height:1.5;color:var(--tag-color);background:#f4f5ef;b
 .empty{padding:40px 24px;text-align:center;border:1px dashed var(--line);border-radius:10px;color:var(--muted);grid-column:1/-1}
 footer{margin-top:28px;padding-top:18px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
 @media(max-width:480px){article{padding:20px}.grid{gap:14px}header{padding-top:4px}}
-</style></head><body><main><header><p class="eyebrow">PUBLIC WORKBENCH</p><h1>${escapeHTML(title)}</h1><div class="intro"><p>A few projects from my workbench.</p><span class="project-count">${publicProjects.length.toLocaleString('en')} public ${publicProjects.length === 1 ? 'project' : 'projects'}</span></div></header><div class="grid">${cards || '<div class="empty">No public projects yet.</div>'}</div><footer>Made with Localist</footer></main></body></html>`
+</style></head><body><main><header><p class="eyebrow">PUBLIC WORKBENCH</p><h1>${escapeHTML(title)}</h1><div class="intro"><p>A few projects from my workbench.</p><span class="project-count">${liveUrl ? 'Loading projects…' : `${publicProjects.length.toLocaleString('en')} public ${publicProjects.length === 1 ? 'project' : 'projects'}`}</span></div></header>${liveUrl ? '<p class="sync-status" role="status">Loading live projects…</p>' : ''}<div class="grid">${cards || `<div class="empty">${liveUrl ? 'Loading live projects…' : 'No public projects yet.'}</div>`}</div><footer>Made with Localist</footer></main>${script}</body></html>`
 }

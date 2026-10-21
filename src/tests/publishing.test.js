@@ -10,7 +10,7 @@ const adapter = `
 let settings = { enabled: false, serverUrl: 'http://127.0.0.1:8080', publicUrl: null }
 window.events = []; window.uploads = 0; window.saved = { projects: [], categories: [] }
 export async function loadIndex() { return window.saved }
-export function download() { throw Error('Offline export was unexpectedly invoked') }
+export async function download(content) { window.downloaded = content }
 export async function saveIndex(index) {
   window.events.push('local-save')
   if (window.failSave) throw Error('Local write failed')
@@ -21,8 +21,8 @@ export const publishing = {
   load: async () => ({ ...settings }),
   save: async value => {
     window.events.push('settings-save')
-    if (value.serverUrl === 'bad') throw Error('Invalid server URL')
-    settings = { ...value, publicUrl: 'http://127.0.0.1:8080/documents/' + 'a'.repeat(64) }
+    if (window.failConfig) throw Error('Could not save settings')
+    settings = { ...value, publicUrl: location.origin + '/documents/' + 'a'.repeat(64) }
     return { ...settings }
   },
   publish: async () => {
@@ -43,43 +43,45 @@ window.addEventListener('error', event => report(event.message || 'Module loadin
 window.addEventListener('unhandledrejection', event => report(String(event.reason)))
 </script><script type="module">
 import { h, render } from 'preact'
+import { useState } from 'preact/hooks'
 import ShowcaseDialog from '/src/componets/ShowcaseDialog.jsx'
 import useProjectIndex from '/src/hooks/useProjectIndex.js'
 window.messages = []
 const notify = value => window.messages.push(value)
 function TestApp() {
   const index = useProjectIndex(notify)
+  const [open, setOpen] = useState(true)
+  window.setShowcaseOpen = setOpen
   window.index = index
-  return h(ShowcaseDialog, { open: true, projects: index.projects, notify, copy: text => { window.copied = text }, close: () => {} })
+  return h(ShowcaseDialog, { open, projects: index.projects, notify, copy: text => { window.copied = text }, close: () => {} })
 }
 render(h(TestApp), document.querySelector('#root'))
 const check = (value, message) => { if (!value) throw Error(message) }
 const wait = async predicate => {
   for (let i = 0; i < 150; i++) { if (predicate()) return; await new Promise(resolve => setTimeout(resolve, 10)) }
-  throw Error('Publishing UI did not reach its expected state')
+  throw Error('Publishing UI did not reach its expected state: ' + JSON.stringify({ events: window.events, uploads: window.uploads, checked: document.querySelector('.publishing-settings input')?.checked, disabled: document.querySelector('.publishing-settings input')?.disabled, buttons: [...document.querySelectorAll('dialog button')].map(b => [b.textContent, b.disabled]), error: document.querySelector('.publishing-settings [role=alert]')?.textContent, messages: window.messages }))
 }
 const section = () => document.querySelector('.publishing-settings')
-const button = text => [...section().querySelectorAll('button')].find(button => button.textContent.includes(text))
 const checkbox = () => section().querySelector('[type=checkbox]')
 let result = 'passed'
 try {
-  await wait(() => window.index.loaded && checkbox())
-  check(!checkbox().checked && button('Publish now').disabled, 'Publishing is enabled by default')
+  await wait(() => window.index.loaded && checkbox() && !checkbox().disabled)
+  check(!checkbox().checked, 'Publishing is enabled by default')
+  check(section().querySelectorAll('input').length === 1 && section().querySelectorAll('button').length === 0, 'Publishing settings contain more than the checkbox')
   check(window.uploads === 0 && window.events.length === 0, 'Opening the dialog uploaded or saved anything')
   check(await window.index.persist([]), 'Disabled publishing blocked a local save')
   await wait(() => window.events.includes('publish'))
   check(window.uploads === 0, 'Disabled publishing uploaded data')
   checkbox().checked = true
   checkbox().dispatchEvent(new Event('change', { bubbles: true }))
-  await wait(() => !button('Save publishing settings').disabled)
-  check(window.uploads === 0, 'Editing the checkbox uploaded data')
-  button('Save publishing settings').click()
-  await wait(() => !button('Publish now').disabled && section().querySelector('input[readonly]'))
-  check(window.uploads === 0, 'Saving settings uploaded data')
-  const savesBefore = window.events.filter(event => event === 'local-save').length
-  button('Publish now').click()
-  await wait(() => window.uploads === 1 && !section().querySelector('fieldset').disabled)
-  check(window.events.filter(event => event === 'local-save').length === savesBefore, 'Publish now changed local projects')
+  await wait(() => window.uploads === 1 && !checkbox().disabled)
+  check(window.events.filter(event => event === 'local-save').length === 1, 'Enabling publishing changed local projects')
+  const download = () => [...document.querySelectorAll('button')].find(button => button.textContent.includes('Download showcase'))
+  await wait(() => !download().disabled && document.querySelector('.notice').textContent.includes('when opened'))
+  download().click()
+  await wait(() => window.downloaded)
+  check(window.downloaded.includes('<script>') && window.downloaded.includes('fetch('), 'Enabled export is still a static snapshot')
+  check(!section().innerHTML.includes('/documents/'), 'Feed URL is displayed in publishing controls')
   const project = { id: 'test', name: 'Local test', path: '/private', category: 'Test', description: '', status: 'progress', public: false, tags: [], repositories: [], createdAt: '2026-01-01', updatedAt: '2026-01-01', icon: 'folder' }
   window.events.length = 0
   check(await window.index.persist([project]), 'Enabled publishing blocked a local save')
@@ -95,14 +97,33 @@ try {
   await wait(() => window.messages.some(message => message.includes('Saved locally. Publishing failed:')))
   check(window.messages.at(-1).includes('Publishing failed:'), 'Local save notification hid the publishing warning')
   check(window.saved.projects.length === 0, 'Publishing failure undid the local save')
-  button('Publish now').click()
-  await wait(() => section().querySelector('[role=alert]') && !section().querySelector('fieldset').disabled)
-  check(section().querySelector('[role=alert]').textContent.includes('local projects are unchanged'), 'Manual failure did not explain local data safety')
-  button('Copy public feed URL').click()
-  check(window.copied === section().querySelector('input[readonly]').value, 'Copied URL differs from the displayed public URL')
+  checkbox().checked = false
+  checkbox().dispatchEvent(new Event('change', { bubbles: true }))
+  await wait(() => !checkbox().disabled && !checkbox().checked && !download().disabled && document.querySelector('.notice').textContent.includes('Re-export'))
+  window.downloaded = null
+  download().click()
+  await wait(() => window.downloaded)
+  check(!window.downloaded.includes('<script>'), 'Unchecked export is not an offline snapshot')
+  window.failConfig = true
+  checkbox().checked = true
+  checkbox().dispatchEvent(new Event('change', { bubbles: true }))
+  await wait(() => section().querySelector('[role=alert]')?.textContent.includes('Could not save settings') && !checkbox().disabled)
+  check(!checkbox().checked, 'Failed settings save did not restore the checkbox')
+  window.failConfig = false
+  checkbox().checked = true
+  checkbox().dispatchEvent(new Event('change', { bubbles: true }))
+  await wait(() => checkbox().checked && !checkbox().disabled && section().querySelector('[role=alert]')?.textContent.includes('Server unavailable'))
+  check(section().querySelector('[role=alert]').textContent.includes('local projects are unchanged'), 'Publishing failure did not explain local data safety')
+  window.setShowcaseOpen(false)
+  await wait(() => !document.querySelector('dialog'))
+  window.failPublish = false
+  const uploadsBefore = window.uploads
+  window.setShowcaseOpen(true)
+  await wait(() => section() && checkbox() && !checkbox().disabled && window.uploads === uploadsBefore + 1)
+  check(checkbox().checked, 'Reopening the dialog lost the enabled setting')
   const dialog = document.querySelector('dialog')
   check(dialog.scrollWidth <= dialog.clientWidth, 'Publishing controls overflow the dialog')
-  for (const control of section().querySelectorAll('button')) check(control.getBoundingClientRect().height >= 44, 'Publishing action is too small')
+  check(section().querySelector('label').getBoundingClientRect().height >= 44, 'Publishing checkbox target is too small')
 } catch (error) { result = error.message }
 const output = document.createElement('pre'); output.id = 'publishing-check-result'; output.textContent = result; document.body.append(output)
 </script>`
@@ -116,6 +137,11 @@ const output = document.createElement('pre'); output.id = 'publishing-check-resu
         resolveId: id => (id === '\0publishing-test-adapter' ? id : null),
         load: id => (id === '\0publishing-test-adapter' ? adapter : null),
         configureServer(server) {
+          server.middlewares.use('/documents/', (_request, response) => {
+            response.setHeader('Access-Control-Allow-Origin', '*')
+            response.setHeader('Content-Type', 'application/json')
+            response.end('{"projects":[]}')
+          })
           server.middlewares.use('/publishing-check', async (_request, response) => {
             response.setHeader('Content-Type', 'text/html')
             response.end(await server.transformIndexHtml('/publishing-check', html))
