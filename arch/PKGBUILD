@@ -5,15 +5,18 @@ pkgrel=1
 pkgdesc='A local project organizer for folders, repositories, and work in progress'
 arch=('x86_64')
 url='https://github.com/skorotkiewicz/localist'
-# Upstream does not currently provide a license file.
-license=('LicenseRef-Unknown')
+license=('MIT')
 depends=('gtk3' 'webkit2gtk-4.1' 'libayatana-appindicator')
 provides=("localist=${pkgver}")
 conflicts=('localist')
 options=('!strip' '!debug')
-source=("https://github.com/skorotkiewicz/localist/releases/download/v${_version}/localist_${_version}_amd64.deb")
-sha256sums=('SKIP')
+source=(
+  "https://github.com/skorotkiewicz/localist/releases/download/v${_version}/localist_${_version}_amd64.deb"
+  "https://github.com/skorotkiewicz/localist/releases/download/v${_version}/LICENSE"
+)
+sha256sums=('SKIP' 'SKIP')
 
 package() {
   bsdtar -xf "$srcdir"/data.tar.* -C "$pkgdir"
+  install -Dm644 "$srcdir/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }

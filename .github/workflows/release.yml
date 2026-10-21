@@ -135,7 +135,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
-        run: gh release upload "$GITHUB_REF_NAME" localist-publish-linux-amd64 localist-publish-linux-arm64 --clobber
+        run: gh release upload "$GITHUB_REF_NAME" localist-publish-linux-amd64 localist-publish-linux-arm64 ../LICENSE --clobber
 
   publish:
     needs: [build, build-server]
@@ -170,7 +170,7 @@ jobs:
           pacman -Syu --noconfirm --needed git openssh github-cli
           useradd --create-home builder
 
-      - name: Download prebuilt Debian package and calculate SHA-256
+      - name: Download release files and calculate SHA-256
         working-directory: arch
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -179,9 +179,10 @@ jobs:
           version=${GITHUB_REF_NAME#v}
           [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]
           sed -i "s/^_version=.*/_version=$version/" PKGBUILD
-          gh release download "$GITHUB_REF_NAME" --pattern "localist_${version}_amd64.deb" --dir .
+          gh release download "$GITHUB_REF_NAME" --pattern "localist_${version}_amd64.deb" --pattern LICENSE --dir .
           checksum=$(sha256sum "localist_${version}_amd64.deb" | cut -d ' ' -f1)
-          sed -i "s/^sha256sums=.*/sha256sums=('$checksum')/" PKGBUILD
+          license_checksum=$(sha256sum LICENSE | cut -d ' ' -f1)
+          sed -i "s/^sha256sums=.*/sha256sums=('$checksum' '$license_checksum')/" PKGBUILD
 
       - name: Build Arch package and generate .SRCINFO
         working-directory: arch
@@ -189,11 +190,12 @@ jobs:
           chown -R builder:builder .
           runuser -u builder -- bash -euo pipefail -c '
             source PKGBUILD
-            [[ "${sha256sums[0]}" =~ ^[0-9a-f]{64}$ ]]
+            [[ "${sha256sums[0]}" =~ ^[0-9a-f]{64}$ && "${sha256sums[1]}" =~ ^[0-9a-f]{64}$ ]]
             makepkg --nodeps --noconfirm
             makepkg --printsrcinfo > .SRCINFO
           '
           bsdtar -tf ./*.pkg.tar.zst | grep -Ex '(\./)?usr/bin/localist'
+          bsdtar -tf ./*.pkg.tar.zst | grep -Ex '(\./)?usr/share/licenses/localist-bin/LICENSE'
 
       - name: Upload Arch package and checksummed PKGBUILD
         env:
