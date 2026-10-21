@@ -16,9 +16,9 @@ export default function PublishingSettings({ notify, copy, onChange }) {
         if (cancelled) return
         setSettings(value)
         setDraft(value)
-        setBusy(value.enabled)
+        setBusy(value.enabled && value.autoPublish)
         try {
-          if (value.enabled) await publishing.publish()
+          if (value.enabled && value.autoPublish) await publishing.publish(true)
         } catch (error) {
           if (!cancelled) setError(`Publishing failed: ${error.message || String(error)} Your local projects are unchanged.`)
         } finally {
@@ -36,7 +36,7 @@ export default function PublishingSettings({ notify, copy, onChange }) {
     }
   }, [onChange])
 
-  const changed = draft && (draft.enabled !== settings.enabled || draft.serverUrl !== settings.serverUrl)
+  const changed = draft && (draft.enabled !== settings.enabled || draft.autoPublish !== settings.autoPublish || draft.serverUrl !== settings.serverUrl)
 
   async function save() {
     setBusy(true)
@@ -46,7 +46,7 @@ export default function PublishingSettings({ notify, copy, onChange }) {
     try {
       next = await publishing.save(draft)
       setDraft(next)
-      if (next.enabled) await publishing.publish()
+      if (next.enabled && next.autoPublish) await publishing.publish(true)
       notify('Publishing settings saved.')
     } catch (error) {
       setError(`Publishing failed: ${error.message || String(error)} Your local projects are unchanged.`)
@@ -73,7 +73,7 @@ export default function PublishingSettings({ notify, copy, onChange }) {
   return (
     <details class="publishing-settings" aria-labelledby="publishing-heading">
       <summary id="publishing-heading">Publishing settings</summary>
-      <p class="form-note">Desktop only, off by default. Upload public projects after local saves, without local path fields. Your secret token stays in private app settings, outside JSON backups and exports.</p>
+      <p class="form-note">Desktop only, off by default. Publish public projects automatically or on demand, without local path fields. Your secret token stays in private app settings, outside JSON backups and exports.</p>
       {draft && (
         <fieldset disabled={busy}>
           <label class="visibility-setting">
@@ -85,8 +85,21 @@ export default function PublishingSettings({ notify, copy, onChange }) {
                 setError('')
               }}
             />
-            Publish public projects after local saves
+            Enable publishing
           </label>
+          <label class="visibility-setting">
+            <input
+              type="checkbox"
+              checked={draft.autoPublish}
+              disabled={!draft.enabled}
+              onChange={e => {
+                setDraft({ ...draft, autoPublish: e.target.checked })
+                setError('')
+              }}
+            />
+            Auto-publish after local saves
+          </label>
+          {settings.enabled && !settings.autoPublish && <p class="form-note">Manual mode: local changes, including privacy changes, stay local until you click Publish now.</p>}
           <label>
             Publishing server URL
             <input

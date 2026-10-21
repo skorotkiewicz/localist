@@ -7,7 +7,7 @@ import { createServer } from 'vite'
 import preact from '@preact/preset-vite'
 
 const adapter = `
-let settings = { enabled: false, serverUrl: 'http://127.0.0.1:8080', publicUrl: null }
+let settings = { enabled: false, autoPublish: true, serverUrl: 'http://127.0.0.1:8080', publicUrl: null }
 window.events = []; window.uploads = 0; window.saved = { projects: [], categories: [] }
 export async function loadIndex() { return window.saved }
 export async function download(content) { window.downloaded = content }
@@ -26,9 +26,9 @@ export const publishing = {
     settings = { ...value, publicUrl: location.origin + '/documents/' + 'a'.repeat(64) }
     return { ...settings }
   },
-  publish: async () => {
-    window.events.push('publish')
-    if (!settings.enabled) return null
+  publish: async (automatic = false) => {
+    window.events.push(automatic ? 'auto-publish' : 'publish')
+    if (!settings.enabled || (automatic && !settings.autoPublish)) return null
     if (window.failPublish) throw Error('Server unavailable')
     window.uploads++
     return settings.publicUrl
@@ -64,6 +64,7 @@ const wait = async predicate => {
 }
 const section = () => document.querySelector('.publishing-settings')
 const checkbox = () => section().querySelector('[type=checkbox]')
+const autoCheckbox = () => section().querySelectorAll('[type=checkbox]')[1]
 const button = text => [...section().querySelectorAll('button')].find(button => button.textContent.includes(text))
 const serverInput = () => section().querySelector('[type=url]')
 const idle = () => !section().querySelector('fieldset').disabled
@@ -79,10 +80,11 @@ try {
   summary.click()
   await wait(() => section().open && serverInput().checkVisibility())
   check(!checkbox().checked && button('Publish now').disabled, 'Publishing is enabled by default')
+  check(autoCheckbox().checked && autoCheckbox().disabled, 'Automatic publishing default or disabled state is incorrect')
   check(serverInput().value === 'http://127.0.0.1:8080' && button('Save publishing settings').disabled, 'Publishing defaults or save state are incorrect')
   check(window.uploads === 0 && window.events.length === 0, 'Opening the dialog uploaded or saved anything')
   check(await window.index.persist([]), 'Disabled publishing blocked a local save')
-  await wait(() => window.events.includes('publish'))
+  await wait(() => window.events.includes('auto-publish'))
   check(window.uploads === 0, 'Disabled publishing uploaded data')
   checkbox().checked = true
   checkbox().dispatchEvent(new Event('change', { bubbles: true }))
@@ -117,7 +119,7 @@ try {
   window.events.length = 0
   check(await window.index.persist([project]), 'Enabled publishing blocked a local save')
   await wait(() => window.uploads === 3)
-  check(window.events[0] === 'local-save' && window.events[1] === 'publish', 'Published before saving locally')
+  check(window.events[0] === 'local-save' && window.events[1] === 'auto-publish', 'Published before saving locally')
   window.failSave = true
   check(!(await window.index.persist([])), 'Failed local save reported success')
   await new Promise(resolve => setTimeout(resolve, 20))
@@ -153,14 +155,42 @@ try {
   const uploadsBeforeRetry = window.uploads
   button('Publish now').click()
   await wait(() => window.uploads === uploadsBeforeRetry + 1 && idle() && !section().querySelector('[role=alert]'))
+  autoCheckbox().checked = false
+  autoCheckbox().dispatchEvent(new Event('change', { bubbles: true }))
+  await wait(() => !button('Save publishing settings').disabled)
+  const uploadsBeforeManual = window.uploads
+  button('Save publishing settings').click()
+  await wait(() => idle() && button('Save publishing settings').disabled)
+  check(window.uploads === uploadsBeforeManual, 'Saving manual mode uploaded a snapshot')
+  check(checkbox().checked && !autoCheckbox().checked, 'Manual mode disabled publishing entirely')
+  check(document.querySelector('.notice').textContent.includes('when opened'), 'Manual mode disabled live showcase exports')
+  window.events.length = 0
+  check(await window.index.persist([project]), 'Manual mode blocked the local save')
+  await wait(() => window.events.includes('auto-publish'))
+  check(window.uploads === uploadsBeforeManual && window.saved.projects.length === 1, 'Manual mode uploaded a local save or lost local data')
+  button('Publish now').click()
+  await wait(() => window.uploads === uploadsBeforeManual + 1 && idle())
+  check(window.events.filter(event => event === 'local-save').length === 1, 'Manual publish changed local projects')
   window.setShowcaseOpen(false)
   await wait(() => !document.querySelector('dialog'))
-  window.failPublish = false
-  const uploadsBefore = window.uploads
+  window.events.length = 0
   window.setShowcaseOpen(true)
-  await wait(() => section() && checkbox() && idle() && window.uploads === uploadsBefore + 1)
-  check(checkbox().checked, 'Reopening the dialog lost the enabled setting')
+  await wait(() => section() && checkbox() && idle() && !document.querySelector('.modal-footer .button.primary').disabled)
+  check(checkbox().checked && !autoCheckbox().checked, 'Reopening lost manual mode')
+  check(window.uploads === uploadsBeforeManual + 1 && window.events.length === 0, 'Opening settings uploaded in manual mode')
   check(!section().open, 'Reopening the dialog did not collapse publishing settings')
+  section().querySelector('summary').click()
+  await wait(() => section().open && serverInput().checkVisibility())
+  autoCheckbox().checked = true
+  autoCheckbox().dispatchEvent(new Event('change', { bubbles: true }))
+  await wait(() => !button('Save publishing settings').disabled)
+  button('Save publishing settings').click()
+  await wait(() => window.uploads === uploadsBeforeManual + 2 && idle())
+  window.setShowcaseOpen(false)
+  await wait(() => !document.querySelector('dialog'))
+  window.setShowcaseOpen(true)
+  await wait(() => section() && checkbox() && idle() && window.uploads === uploadsBeforeManual + 3)
+  check(autoCheckbox().checked, 'Reopening lost automatic mode')
   section().querySelector('summary').click()
   await wait(() => section().open && serverInput().checkVisibility())
   const dialog = document.querySelector('dialog')

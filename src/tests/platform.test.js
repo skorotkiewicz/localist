@@ -53,12 +53,14 @@ test('both Vite builds share one frontend and select their own adapter', { skip:
     assert.deepEqual(calls, [['plugin:window|hide', { label: 'main' }]])
     calls.length = 0
     await desktop.publishing.load()
-    await desktop.publishing.save({ enabled: true, serverUrl: 'http://127.0.0.1:8080' })
+    await desktop.publishing.save({ enabled: true, autoPublish: false, serverUrl: 'http://127.0.0.1:8080' })
     await desktop.publishing.publish()
+    await desktop.publishing.publish(true)
     assert.deepEqual(calls, [
       ['load_publishing', {}],
-      ['save_publishing', { enabled: true, serverUrl: 'http://127.0.0.1:8080' }],
-      ['publish_projects', {}]
+      ['save_publishing', { enabled: true, autoPublish: false, serverUrl: 'http://127.0.0.1:8080' }],
+      ['publish_projects', { automatic: false }],
+      ['publish_projects', { automatic: true }]
     ])
   } finally {
     globalThis.window = originalWindow

@@ -19,14 +19,21 @@ const CHECKSUM_CONTEXT: &str = "localist-publish:token:v1:";
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct Config {
     enabled: bool,
+    #[serde(default = "default_auto_publish")]
+    auto_publish: bool,
     server_url: String,
     token: Option<String>,
+}
+
+fn default_auto_publish() -> bool {
+    true
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
             enabled: false,
+            auto_publish: default_auto_publish(),
             server_url: DEFAULT_SERVER.into(),
             token: None,
         }
@@ -37,6 +44,7 @@ impl Default for Config {
 #[serde(rename_all = "camelCase")]
 pub struct Settings {
     enabled: bool,
+    auto_publish: bool,
     server_url: String,
     public_url: Option<String>,
 }
@@ -45,6 +53,7 @@ impl Config {
     fn settings(&self) -> Settings {
         Settings {
             enabled: self.enabled,
+            auto_publish: self.auto_publish,
             server_url: self.server_url.clone(),
             public_url: self.token.as_ref().map(|token| {
                 format!(
@@ -76,11 +85,17 @@ impl Publisher {
         Ok(read_config(&self.file)?.settings())
     }
 
-    pub async fn configure(&self, enabled: bool, server_url: String) -> Result<Settings, String> {
+    pub async fn configure(
+        &self,
+        enabled: bool,
+        auto_publish: bool,
+        server_url: String,
+    ) -> Result<Settings, String> {
         let _guard = self.lock.lock().await;
         let server_url = normalize_server(&server_url)?;
         let mut config = read_config(&self.file)?;
         config.enabled = enabled;
+        config.auto_publish = auto_publish;
         config.server_url = server_url;
         if enabled && config.token.is_none() {
             config.token = Some(generate_token()?);
@@ -89,10 +104,14 @@ impl Publisher {
         Ok(config.settings())
     }
 
-    pub async fn publish(&self, index_file: &Mutex<PathBuf>) -> Result<Option<String>, String> {
+    pub async fn publish(
+        &self,
+        index_file: &Mutex<PathBuf>,
+        automatic: bool,
+    ) -> Result<Option<String>, String> {
         let _guard = self.lock.lock().await;
         let config = read_config(&self.file)?;
-        if !config.enabled {
+        if !config.enabled || (automatic && !config.auto_publish) {
             return Ok(None);
         }
         // Read after taking the publishing lock so queued saves cannot upload stale snapshots.
@@ -244,6 +263,7 @@ mod tests {
         assert!(valid_token(&generate_token().unwrap()));
         let config = Config {
             enabled: true,
+            auto_publish: true,
             server_url: DEFAULT_SERVER.into(),
             token: Some(token.into()),
         };
@@ -287,16 +307,16 @@ mod tests {
             assert!(!publisher.settings().await.unwrap().enabled);
             assert!(!file.exists());
             publisher
-                .configure(true, DEFAULT_SERVER.into())
+                .configure(true, true, DEFAULT_SERVER.into())
                 .await
                 .unwrap();
             let token = read_config(&file).unwrap().token.unwrap();
             publisher
-                .configure(false, DEFAULT_SERVER.into())
+                .configure(false, true, DEFAULT_SERVER.into())
                 .await
                 .unwrap();
             publisher
-                .configure(true, DEFAULT_SERVER.into())
+                .configure(true, true, DEFAULT_SERVER.into())
                 .await
                 .unwrap();
             assert_eq!(
@@ -314,11 +334,42 @@ mod tests {
             fs::write(&file, "{corrupt").unwrap();
             assert!(
                 publisher
-                    .configure(true, DEFAULT_SERVER.into())
+                    .configure(true, true, DEFAULT_SERVER.into())
                     .await
                     .is_err()
             );
             assert_eq!(fs::read_to_string(&file).unwrap(), "{corrupt");
+        });
+    }
+
+    #[test]
+    fn legacy_settings_keep_automatic_mode_and_manual_mode_skips_automatic_uploads() {
+        tauri::async_runtime::block_on(async {
+            let directory = tempfile::tempdir().unwrap();
+            let file = directory.path().join("publishing.json");
+            let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+            let server = format!("http://{}", listener.local_addr().unwrap());
+            let token = "lp1_AAECAwQFBgcICQoLDA0ODxAREhMUFRYX5VZh-f0u";
+            let legacy = json!({ "enabled": true, "serverUrl": server, "token": token });
+            fs::write(&file, serde_json::to_vec(&legacy).unwrap()).unwrap();
+            let original = fs::read(&file).unwrap();
+            let publisher = Publisher::new(file.clone());
+            assert!(publisher.settings().await.unwrap().auto_publish);
+            assert_eq!(fs::read(&file).unwrap(), original);
+            publisher.configure(true, false, server).await.unwrap();
+            let config = read_config(&file).unwrap();
+            assert!(!config.auto_publish);
+            assert_eq!(config.token.as_deref(), Some(token));
+            let restarted = Publisher::new(file);
+            assert!(!restarted.settings().await.unwrap().auto_publish);
+            let index_file = directory.path().join("must-not-be-created.json");
+            let index = Mutex::new(index_file.clone());
+            assert!(restarted.publish(&index, true).await.unwrap().is_none());
+            assert!(
+                !index_file.exists(),
+                "automatic publishing accessed project storage in manual mode"
+            );
+            drop(listener);
         });
     }
 
@@ -366,9 +417,22 @@ mod tests {
             let original = fs::read(&index_file).unwrap();
             let file = Mutex::new(index_file.clone());
             let publisher = Publisher::new(directory.path().join("publishing.json"));
-            assert!(publisher.publish(&file).await.unwrap().is_none());
-            publisher.configure(true, server).await.unwrap();
-            let url = publisher.publish(&file).await.unwrap().unwrap();
+            assert!(publisher.publish(&file, false).await.unwrap().is_none());
+            let settings = publisher
+                .configure(true, false, server.clone())
+                .await
+                .unwrap();
+            assert!(publisher.publish(&file, true).await.unwrap().is_none());
+            assert_eq!(
+                client
+                    .get(settings.public_url.unwrap())
+                    .send()
+                    .await
+                    .unwrap()
+                    .status(),
+                StatusCode::NOT_FOUND
+            );
+            let url = publisher.publish(&file, false).await.unwrap().unwrap();
             let snapshot: serde_json::Value =
                 client.get(&url).send().await.unwrap().json().await.unwrap();
             assert_eq!(snapshot["projects"].as_array().unwrap().len(), 1);
@@ -381,13 +445,22 @@ mod tests {
             )
             .unwrap();
             let saved = fs::read(&index_file).unwrap();
-            assert_eq!(publisher.publish(&file).await.unwrap(), Some(url.clone()));
+            assert!(publisher.publish(&file, true).await.unwrap().is_none());
+            let unchanged: serde_json::Value =
+                client.get(&url).send().await.unwrap().json().await.unwrap();
+            assert_eq!(unchanged["projects"].as_array().unwrap().len(), 1);
+            assert_eq!(
+                publisher.publish(&file, false).await.unwrap(),
+                Some(url.clone())
+            );
             let snapshot: serde_json::Value =
                 client.get(&url).send().await.unwrap().json().await.unwrap();
             assert_eq!(snapshot["projects"], json!([]));
+            publisher.configure(true, true, server).await.unwrap();
+            assert_eq!(publisher.publish(&file, true).await.unwrap(), Some(url));
             child.0.kill().unwrap();
             child.0.wait().unwrap();
-            assert!(publisher.publish(&file).await.is_err());
+            assert!(publisher.publish(&file, true).await.is_err());
             assert_eq!(fs::read(&index_file).unwrap(), saved);
             assert_ne!(original, saved);
         });

@@ -55,7 +55,7 @@ export default function useProjectIndex(notify) {
       setExtraCategories(index.categories)
       if (publishing) {
         Promise.resolve()
-          .then(() => publishing.publish())
+          .then(() => publishing.publish(true))
           .catch(error => {
             notify(`Saved locally. Publishing failed: ${error.message || String(error)} Previous public snapshot may still be online.`)
           })

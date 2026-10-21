@@ -9,8 +9,8 @@ export const windowControls = {
 
 export const publishing = {
   load: () => invoke('load_publishing'),
-  save: ({ enabled, serverUrl }) => invoke('save_publishing', { enabled, serverUrl }),
-  publish: () => invoke('publish_projects')
+  save: ({ enabled, autoPublish, serverUrl }) => invoke('save_publishing', { enabled, autoPublish, serverUrl }),
+  publish: (automatic = false) => invoke('publish_projects', { automatic })
 }
 
 export function loadIndex() {

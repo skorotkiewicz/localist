@@ -38,18 +38,20 @@ async fn load_publishing(
 #[tauri::command]
 async fn save_publishing(
     enabled: bool,
+    auto_publish: bool,
     server_url: String,
     publisher: State<'_, publishing::Publisher>,
 ) -> Result<publishing::Settings, String> {
-    publisher.configure(enabled, server_url).await
+    publisher.configure(enabled, auto_publish, server_url).await
 }
 
 #[tauri::command]
 async fn publish_projects(
+    automatic: bool,
     file: State<'_, Mutex<PathBuf>>,
     publisher: State<'_, publishing::Publisher>,
 ) -> Result<Option<String>, String> {
-    publisher.publish(&file).await
+    publisher.publish(&file, automatic).await
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
