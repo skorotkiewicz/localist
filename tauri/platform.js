@@ -7,6 +7,12 @@ export const windowControls = {
   close: () => getCurrentWindow().close()
 }
 
+export const publishing = {
+  load: () => invoke('load_publishing'),
+  save: ({ enabled, serverUrl }) => invoke('save_publishing', { enabled, serverUrl }),
+  publish: () => invoke('publish_projects')
+}
+
 export function loadIndex() {
   return invoke('load_projects')
 }

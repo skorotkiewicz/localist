@@ -1,4 +1,6 @@
 import { useState } from 'preact/hooks'
+import { publishing } from '#platform'
+import PublishingSettings from './PublishingSettings'
 import { generateShowcase } from '../projects'
 import { download } from '../helpers/json'
 import Icon from './Icon'
@@ -12,6 +14,7 @@ export default function ShowcaseDialog({ open, projects, notify, copy, close }) 
 
   return (
     <Modal title="A little corner of the internet." subtitle={`${publicCount} public projects. No private projects or local paths, ever.`} close={close} wide>
+      {publishing && <PublishingSettings notify={notify} copy={copy} />}
       <label>
         Showcase title
         <input value={showcaseTitle} onInput={e => setShowcaseTitle(e.target.value)} maxLength={150} />

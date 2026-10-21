@@ -14,6 +14,7 @@ test('Node tests use the web adapter by default', () => {
   assert.equal(platform.saveIndex, web.saveIndex)
   assert.equal(platform.download, web.download)
   assert.equal(platform.windowControls, null)
+  assert.equal(platform.publishing, null)
 })
 
 test('both Vite builds share one frontend and select their own adapter', { skip: !existsSync(resolve(root, 'tauri/node_modules/vite')) }, async () => {
@@ -50,6 +51,15 @@ test('both Vite builds share one frontend and select their own adapter', { skip:
     }
     await desktop.windowControls.hide()
     assert.deepEqual(calls, [['plugin:window|hide', { label: 'main' }]])
+    calls.length = 0
+    await desktop.publishing.load()
+    await desktop.publishing.save({ enabled: true, serverUrl: 'http://127.0.0.1:8080' })
+    await desktop.publishing.publish()
+    assert.deepEqual(calls, [
+      ['load_publishing', {}],
+      ['save_publishing', { enabled: true, serverUrl: 'http://127.0.0.1:8080' }],
+      ['publish_projects', {}]
+    ])
   } finally {
     globalThis.window = originalWindow
   }

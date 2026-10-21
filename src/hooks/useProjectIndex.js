@@ -1,4 +1,4 @@
-import { loadIndex, saveIndex } from '#platform'
+import { loadIndex, saveIndex, publishing } from '#platform'
 import { useEffect, useRef, useState } from 'preact/hooks'
 import { STATUS_LABELS, removeUnusedCategory, validateIndex } from '../projects'
 
@@ -53,6 +53,13 @@ export default function useProjectIndex(notify) {
       const index = validateIndex(data)
       setProjects(index.projects)
       setExtraCategories(index.categories)
+      if (publishing) {
+        Promise.resolve()
+          .then(() => publishing.publish())
+          .catch(error => {
+            notify(`Saved locally. Publishing failed: ${error.message || String(error)} Previous public snapshot may still be online.`)
+          })
+      }
       return true
     } catch (error) {
       notify(error.message || String(error) || 'Could not save projects.json.')

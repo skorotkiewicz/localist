@@ -4,7 +4,7 @@ import Modal from './Modal'
 
 export default function StorageDialog({ projects, categories, loaded, notify, importRef, close }) {
   return (
-    <Modal title="Local by design." subtitle="No account. No cloud. Your project index is a JSON file on this computer." close={close}>
+    <Modal title="Local by design." subtitle="No account. Your full project index is a JSON file on this computer." close={close}>
       <div class="storage-detail">
         <Icon name="storage" size={30} />
         <div>

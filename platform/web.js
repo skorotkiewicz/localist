@@ -1,4 +1,5 @@
 export const windowControls = null
+export const publishing = null
 
 async function request(options) {
   const response = await fetch('/api/projects', options)
