@@ -1,0 +1,18 @@
+[
+  [["api", "learning"], "sun"],
+  [["cli"], "terminal"],
+  [["dashboard"], "layout"],
+  [["web"], "layout"],
+  [["frontend"], "layout"],
+  [["website"], "window"],
+  [["desktop"], "window"],
+  [["gui"], "window"],
+  [["database"], "leaf"],
+  [["api"], "bookmark"],
+  [["code"], "code"],
+  [["config"], "code"],
+  [["notes"], "book"],
+  [["docs"], "book"],
+  [["automation"], "image"],
+  [["script"], "image"]
+]

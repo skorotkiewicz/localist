@@ -59,6 +59,13 @@ test('extracted components keep their actions connected', async t => {
   })
   assert.equal(card.props.style, undefined)
   assert.ok(elements(card).some(node => node.props?.class === 'project-icon'))
+  const iconFor = selected => elements(ProjectCard({ project: selected })).find(node => node.props?.class === 'project-icon').props.children.props.name
+  assert.equal(iconFor({ ...project, icon: 'terminal', tags: ['CLI'] }), 'terminal')
+  assert.equal(iconFor({ ...project, icon: 'layout', tags: ['Dashboard', 'Self-hosted'] }), 'layout')
+  assert.equal(iconFor({ ...project, icon: 'sun', tags: ['API', 'Learning'] }), 'sun')
+  assert.equal(iconFor({ ...project, icon: 'code', tags: ['code'] }), 'code')
+  assert.equal(iconFor({ ...project, tags: ['CLI'] }), 'folder')
+  assert.equal(iconFor({ ...project, icon: 'leaf', tags: ['API', 'Learning'] }), 'leaf')
   assert.equal(elements(card).find(node => node.props?.class === 'tag language-tag').props.style, undefined)
   const tags = elements(card).filter(node => node.props?.class === 'tag colored-tag')
   assert.equal(tags.length, 2)
@@ -199,6 +206,90 @@ test('extracted components keep their actions connected', async t => {
     elements(sidebar).some(node => node.props?.class === 'share-card'),
     true
   )
+})
+
+test('project editor saves inferred icons without extra metadata and preserves unchanged custom icons', { skip: !existsSync('/usr/lib/chromium/chromium') }, async t => {
+  const html = `<!doctype html><link rel="stylesheet" href="/src/index.css"><link rel="stylesheet" href="/src/app.css"><div id="root"></div><script type="module">
+import { h, render } from 'preact'
+import ProjectEditor from '/src/componets/ProjectEditor.jsx'
+const base = { id: 'icon-test', name: 'Icon test', path: '/private/icon-test', category: 'Custom', description: '', tags: [], repositories: [], status: 'progress', public: false, icon: 'folder', createdAt: '2026-01-01', updatedAt: '2026-01-01' }
+const check = (value, message) => { if (!value) throw Error(message) }
+const wait = async predicate => {
+  for (let attempt = 0; attempt < 150; attempt++) {
+    if (predicate()) return
+    await new Promise(resolve => setTimeout(resolve, 10))
+  }
+  throw Error('Project editor did not reach its expected state')
+}
+const fill = async (name, value) => {
+  const input = [...document.querySelectorAll('label')].find(label => label.textContent.trim().startsWith(name)).querySelector('input')
+  input.value = value
+  input.dispatchEvent(new Event('input', { bubbles: true }))
+  await new Promise(resolve => setTimeout(resolve, 0))
+}
+let key = 0
+const submit = async (project, tags) => {
+  window.saved = null
+  render(h(ProjectEditor, { key: ++key, project, categories: ['Custom'], save: value => { window.saved = value }, close: () => {} }), document.querySelector('#root'))
+  await wait(() => document.querySelector('dialog')?.open)
+  await fill('Project name', 'Saved icon test')
+  if (!project) {
+    await fill('Local path', '/private/new-project')
+    await fill('Category', 'Custom')
+  }
+  if (tags !== undefined) await fill('Tags', tags)
+  document.querySelector('form').requestSubmit()
+  await wait(() => window.saved)
+  check(!Object.hasOwn(window.saved, 'autoIcon'), 'Saved project contains unwanted autoIcon metadata')
+  return window.saved
+}
+let result = 'passed'
+try {
+  let saved = await submit(null, ' CLI, Productivity ')
+  check(saved.icon === 'terminal', 'New CLI project did not save its terminal icon')
+  saved = await submit(saved, 'Notes')
+  check(saved.icon === 'book', 'Changing tags did not replace the stored icon')
+  saved = await submit(saved, '')
+  check(saved.icon === 'folder', 'Removing recognized tags did not restore the folder icon')
+  saved = await submit({ ...base, tags: ['CLI'] })
+  check(saved.icon === 'terminal', 'Default folder icon was not resolved on save')
+  const custom = { ...base, icon: 'leaf', tags: ['API', 'Learning'] }
+  saved = await submit(custom)
+  check(saved.icon === 'leaf', 'Editing another field overwrote an imported custom icon')
+  saved = await submit(custom, 'code')
+  check(saved.icon === 'code', 'Changed tags did not update a custom icon')
+  saved = await submit(saved, 'API, Learning')
+  check(saved.icon === 'sun', 'API learning project did not save its sun icon')
+  saved = await submit(null, [...Array.from({ length: 30 }, (_, i) => 'Unknown ' + i), 'CLI'].join(', '))
+  check(saved.tags.length === 30 && saved.icon === 'folder', 'Discarded tags influenced the saved icon')
+} catch (error) { result = error.message }
+const output = document.createElement('pre'); output.id = 'editor-icon-check-result'; output.textContent = result; document.body.append(output)
+</script>`
+  const server = await createServer({
+    configFile: false,
+    plugins: [
+      preact(),
+      {
+        name: 'editor-icon-check',
+        configureServer(server) {
+          server.middlewares.use('/editor-icon-check', async (_request, response) => {
+            response.setHeader('Content-Type', 'text/html')
+            response.end(await server.transformIndexHtml('/editor-icon-check', html))
+          })
+        }
+      }
+    ],
+    server: { host: '127.0.0.1', port: 0 },
+    logLevel: 'silent'
+  })
+  t.after(() => server.close())
+  await server.listen()
+  const { stdout } = await promisify(execFile)(
+    '/usr/lib/chromium/chromium',
+    ['--headless', '--no-sandbox', '--disable-gpu', '--window-size=800,900', '--dump-dom', '--virtual-time-budget=6000', `http://127.0.0.1:${server.httpServer.address().port}/editor-icon-check`],
+    { timeout: 20000, maxBuffer: 2 * 1024 * 1024 }
+  )
+  assert.equal(stdout.match(/<pre id="editor-icon-check-result">([^<]+)<\/pre>/)?.[1], 'passed', `Editor icon browser check failed: ${stdout.slice(-1600)}`)
 })
 
 test('clear search resets only the query and returns focus to the input', { skip: !existsSync('/usr/lib/chromium/chromium') }, async t => {

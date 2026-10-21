@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { filterProjects, generateShowcase, removeArchivedProject, removeUnusedCategory, validateIndex, validateProjects } from '../projects.js'
 import { exportJSON, importJSON } from '../helpers/json.js'
 import { getTagColor } from '../helpers/tagColor.js'
+import { getProjectIcon } from '../helpers/projectIcon.js'
 
 const project = {
   id: 'test-1',
@@ -38,6 +39,33 @@ test('extracted JSON helpers receive their dependencies explicitly', async () =>
   })
   assert.equal(e.target.value, '')
   assert.equal(messages[1], 'Imported 0 projects')
+})
+
+test('tag icon selection matches the examples and ignores tag case and order', () => {
+  for (const [tags, expected] of [
+    [['CLI', 'Productivity'], 'terminal'],
+    [['Dashboard', 'Self-hosted'], 'layout'],
+    [['Website', 'Personal'], 'window'],
+    [['Database', 'Experiment'], 'leaf'],
+    [['API', 'Side project'], 'bookmark'],
+    [['Config', 'Tools'], 'code'],
+    [['Notes', 'Local-first'], 'book'],
+    [['Automation', 'Script'], 'image'],
+    [['API', 'Learning'], 'sun'],
+    [['code'], 'code'],
+    [['web'], 'layout'],
+    [['frontend'], 'layout'],
+    [['desktop'], 'window'],
+    [['gui'], 'window'],
+    [['docs'], 'book']
+  ]) {
+    const normalized = tags.map(tag => ` ${tag.toUpperCase()} `)
+    assert.equal(getProjectIcon({ tags: normalized }), expected)
+    assert.equal(getProjectIcon({ tags: normalized.reverse() }), expected)
+  }
+  assert.equal(getProjectIcon({ tags: ['CLI', 'API', 'Learning'] }), 'sun')
+  assert.equal(getProjectIcon({ tags: ['Personal', 'Productivity', 'Tools', 'Learning'] }), 'folder')
+  assert.equal(getProjectIcon({ tags: [] }), 'folder')
 })
 
 test('a new index has no projects or preset categories', () => {

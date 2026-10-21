@@ -49,6 +49,23 @@ Install the existing dependencies with `bun install` in both directories when se
 
 The desktop tray offers Show / hide Localist and Quit. The title-bar Hide to tray button hides the window without quitting. Left-click toggles the window on Windows and macOS. Linux builds use the KSNI backend for left-click activation on StatusNotifier-compatible panels; the menu remains available. Showing also restores minimized windows. The window's close behavior is unchanged.
 
+## Project icons
+
+New projects and projects with a folder icon get an icon from their tags when saved.
+Changing tags also replaces the stored icon. The first matching row wins:
+
+| Tags | Icon |
+| --- | --- |
+| `api` and `learning` together | `sun` |
+| `cli` | `terminal` |
+| `dashboard`, `web`, or `frontend` | `layout` |
+| `website`, `desktop`, or `gui` | `window` |
+| `database` | `leaf` |
+| `api` | `bookmark` |
+| `code` or `config` | `code` |
+| `notes` or `docs` | `book` |
+| `automation` or `script` | `image` |
+
 ## Optional desktop publishing
 
 In the desktop Showcase dialog, enable **Publish public projects after local saves** and save the

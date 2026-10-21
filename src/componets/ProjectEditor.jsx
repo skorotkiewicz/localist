@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks'
 import { STATUS_LABELS } from '../projects'
+import { getProjectIcon } from '../helpers/projectIcon'
 import Icon from './Icon'
 import Modal from './Modal'
 
@@ -26,14 +27,17 @@ function ProjectEditor({ project, categories, save, close }) {
         onSubmit={e => {
           e.preventDefault()
           const now = new Date().toISOString()
+          const tags = tagText
+            .split(',')
+            .map(t => t.trim().slice(0, 100))
+            .filter(Boolean)
+            .slice(0, 30)
+          const tagsChanged = !project || tagText !== project.tags.join(', ')
           save({
             ...draft,
             repositories: repositoryText.split('\n').filter(Boolean),
-            tags: tagText
-              .split(',')
-              .map(t => t.trim().slice(0, 100))
-              .filter(Boolean)
-              .slice(0, 30),
+            tags,
+            icon: tagsChanged || draft.icon === 'folder' ? getProjectIcon({ tags }) : draft.icon,
             name: draft.name.trim(),
             path: draft.path.trim(),
             category: draft.category.trim(),
