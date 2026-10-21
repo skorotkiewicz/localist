@@ -1402,19 +1402,40 @@ details.project-description {
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 22px;
+  h3 {
+    font-size: 14px;
+    margin-bottom: 6px;
+  }
+  fieldset {
+    border: 0;
+    padding: 0;
+    margin: 14px 0 0;
+    min-width: 0;
+  }
   .visibility-setting {
     display: flex;
     align-items: center;
     gap: 10px;
     min-height: 44px;
-    margin-bottom: 0;
+    margin-bottom: 18px;
     input {
       flex-shrink: 0;
     }
   }
-  .form-note {
+  .form-note,
+  label small {
     color: var(--text);
     font-size: 12px;
+  }
+  .publishing-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  button,
+  input:not([type="checkbox"]) {
+    min-height: 44px;
   }
 }
 .preview-label {

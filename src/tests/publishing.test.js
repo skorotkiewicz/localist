@@ -22,6 +22,7 @@ export const publishing = {
   save: async value => {
     window.events.push('settings-save')
     if (window.failConfig) throw Error('Could not save settings')
+    if (value.serverUrl === 'bad') throw Error('Invalid server URL')
     settings = { ...value, publicUrl: location.origin + '/documents/' + 'a'.repeat(64) }
     return { ...settings }
   },
@@ -63,34 +64,56 @@ const wait = async predicate => {
 }
 const section = () => document.querySelector('.publishing-settings')
 const checkbox = () => section().querySelector('[type=checkbox]')
+const button = text => [...section().querySelectorAll('button')].find(button => button.textContent.includes(text))
+const serverInput = () => section().querySelector('[type=url]')
+const idle = () => !section().querySelector('fieldset').disabled
 let result = 'passed'
 try {
-  await wait(() => window.index.loaded && checkbox() && !checkbox().disabled)
-  check(!checkbox().checked, 'Publishing is enabled by default')
-  check(section().querySelectorAll('input').length === 1 && section().querySelectorAll('button').length === 0, 'Publishing settings contain more than the checkbox')
+  await wait(() => window.index.loaded && checkbox() && idle())
+  check(!checkbox().checked && button('Publish now').disabled, 'Publishing is enabled by default')
+  check(serverInput().value === 'http://127.0.0.1:8080' && button('Save publishing settings').disabled, 'Publishing defaults or save state are incorrect')
   check(window.uploads === 0 && window.events.length === 0, 'Opening the dialog uploaded or saved anything')
   check(await window.index.persist([]), 'Disabled publishing blocked a local save')
   await wait(() => window.events.includes('publish'))
   check(window.uploads === 0, 'Disabled publishing uploaded data')
   checkbox().checked = true
   checkbox().dispatchEvent(new Event('change', { bubbles: true }))
-  await wait(() => window.uploads === 1 && !checkbox().disabled)
-  check(window.events.filter(event => event === 'local-save').length === 1, 'Enabling publishing changed local projects')
+  await wait(() => !button('Save publishing settings').disabled)
+  check(window.uploads === 0 && button('Publish now').disabled, 'Unsaved settings were applied')
+  button('Save publishing settings').click()
+  await wait(() => window.uploads === 1 && idle())
+  check(window.events.filter(event => event === 'local-save').length === 1, 'Saving publishing settings changed local projects')
   const download = () => [...document.querySelectorAll('button')].find(button => button.textContent.includes('Download showcase'))
   await wait(() => !download().disabled && document.querySelector('.notice').textContent.includes('when opened'))
   download().click()
   await wait(() => window.downloaded)
   check(window.downloaded.includes('<script>') && window.downloaded.includes('fetch('), 'Enabled export is still a static snapshot')
-  check(!section().innerHTML.includes('/documents/'), 'Feed URL is displayed in publishing controls')
+  const feed = () => section().querySelector('input[readonly]')
+  check(feed()?.value.includes('/documents/'), 'Public JSON feed is missing')
+  button('Copy public feed URL').click()
+  check(window.copied === feed().value, 'Copied URL differs from the public feed')
+  const savesBeforePublish = window.events.filter(event => event === 'local-save').length
+  button('Publish now').click()
+  await wait(() => window.uploads === 2 && idle())
+  check(window.events.filter(event => event === 'local-save').length === savesBeforePublish, 'Publish now changed local projects')
+  serverInput().value = 'bad'
+  serverInput().dispatchEvent(new Event('input', { bubbles: true }))
+  await wait(() => !button('Save publishing settings').disabled && button('Publish now').disabled)
+  button('Save publishing settings').click()
+  await wait(() => section().querySelector('[role=alert]')?.textContent.includes('Invalid server URL') && idle())
+  check(serverInput().value === 'bad' && window.uploads === 2, 'Failed settings save discarded input or published')
+  serverInput().value = 'http://127.0.0.1:8080'
+  serverInput().dispatchEvent(new Event('input', { bubbles: true }))
+  await wait(() => button('Save publishing settings').disabled && !button('Publish now').disabled)
   const project = { id: 'test', name: 'Local test', path: '/private', category: 'Test', description: '', status: 'progress', public: false, tags: [], repositories: [], createdAt: '2026-01-01', updatedAt: '2026-01-01', icon: 'folder' }
   window.events.length = 0
   check(await window.index.persist([project]), 'Enabled publishing blocked a local save')
-  await wait(() => window.uploads === 2)
+  await wait(() => window.uploads === 3)
   check(window.events[0] === 'local-save' && window.events[1] === 'publish', 'Published before saving locally')
   window.failSave = true
   check(!(await window.index.persist([])), 'Failed local save reported success')
   await new Promise(resolve => setTimeout(resolve, 20))
-  check(window.uploads === 2 && window.saved.projects.length === 1, 'Failed local save uploaded or changed data')
+  check(window.uploads === 3 && window.saved.projects.length === 1, 'Failed local save uploaded or changed data')
   window.failSave = false; window.failPublish = true
   check(await window.index.persist([]), 'Publishing failure failed a successful local save')
   notify('Changes saved')
@@ -99,7 +122,9 @@ try {
   check(window.saved.projects.length === 0, 'Publishing failure undid the local save')
   checkbox().checked = false
   checkbox().dispatchEvent(new Event('change', { bubbles: true }))
-  await wait(() => !checkbox().disabled && !checkbox().checked && !download().disabled && document.querySelector('.notice').textContent.includes('Re-export'))
+  await wait(() => !button('Save publishing settings').disabled)
+  button('Save publishing settings').click()
+  await wait(() => idle() && !checkbox().checked && !download().disabled && document.querySelector('.notice').textContent.includes('Re-export'))
   window.downloaded = null
   download().click()
   await wait(() => window.downloaded)
@@ -107,23 +132,30 @@ try {
   window.failConfig = true
   checkbox().checked = true
   checkbox().dispatchEvent(new Event('change', { bubbles: true }))
-  await wait(() => section().querySelector('[role=alert]')?.textContent.includes('Could not save settings') && !checkbox().disabled)
-  check(!checkbox().checked, 'Failed settings save did not restore the checkbox')
+  await wait(() => !button('Save publishing settings').disabled)
+  button('Save publishing settings').click()
+  await wait(() => section().querySelector('[role=alert]')?.textContent.includes('Could not save settings') && idle())
+  check(checkbox().checked && !button('Save publishing settings').disabled, 'Failed settings save discarded the draft')
+  check(document.querySelector('.notice').textContent.includes('Re-export'), 'Failed settings save changed the active export mode')
   window.failConfig = false
-  checkbox().checked = true
-  checkbox().dispatchEvent(new Event('change', { bubbles: true }))
-  await wait(() => checkbox().checked && !checkbox().disabled && section().querySelector('[role=alert]')?.textContent.includes('Server unavailable'))
+  button('Save publishing settings').click()
+  await wait(() => checkbox().checked && idle() && section().querySelector('[role=alert]')?.textContent.includes('Server unavailable'))
   check(section().querySelector('[role=alert]').textContent.includes('local projects are unchanged'), 'Publishing failure did not explain local data safety')
+  window.failPublish = false
+  const uploadsBeforeRetry = window.uploads
+  button('Publish now').click()
+  await wait(() => window.uploads === uploadsBeforeRetry + 1 && idle() && !section().querySelector('[role=alert]'))
   window.setShowcaseOpen(false)
   await wait(() => !document.querySelector('dialog'))
   window.failPublish = false
   const uploadsBefore = window.uploads
   window.setShowcaseOpen(true)
-  await wait(() => section() && checkbox() && !checkbox().disabled && window.uploads === uploadsBefore + 1)
+  await wait(() => section() && checkbox() && idle() && window.uploads === uploadsBefore + 1)
   check(checkbox().checked, 'Reopening the dialog lost the enabled setting')
   const dialog = document.querySelector('dialog')
   check(dialog.scrollWidth <= dialog.clientWidth, 'Publishing controls overflow the dialog')
   check(section().querySelector('label').getBoundingClientRect().height >= 44, 'Publishing checkbox target is too small')
+  for (const control of section().querySelectorAll('button, input[type=url], input[readonly]')) check(control.getBoundingClientRect().height >= 44, 'Publishing control is too small')
 } catch (error) { result = error.message }
 const output = document.createElement('pre'); output.id = 'publishing-check-result'; output.textContent = result; document.body.append(output)
 </script>`

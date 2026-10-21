@@ -19,7 +19,7 @@ export default function ShowcaseDialog({ open, projects, notify, copy, close }) 
 
   return (
     <Modal title="A little corner of the internet." subtitle={`${publicCount} public projects. No private projects or local paths, ever.`} close={close} wide>
-      {publishing && <PublishingSettings notify={notify} onChange={setPublishSettings} />}
+      {publishing && <PublishingSettings notify={notify} copy={copy} onChange={setPublishSettings} />}
       <label>
         Showcase title
         <input value={showcaseTitle} onInput={e => setShowcaseTitle(e.target.value)} maxLength={150} />
