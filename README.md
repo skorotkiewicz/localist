@@ -68,6 +68,10 @@ Changing tags also replaces the stored icon. The first matching row wins:
 
 ## Optional desktop publishing
 
+<p align="center">
+  <a href=".github/assets/publishing-settings.png"><img src=".github/assets/publishing-settings.png" alt="Publishing settings with automatic publishing, server URL, and public JSON feed" width="80%"></a>
+</p>
+
 In the desktop Showcase dialog, enable **Publish public projects after local saves** and save the
 publishing settings. It is off by default and unavailable in web mode. For local testing, run the
 server in `publish-server/` and use `http://127.0.0.1:8080` as the server URL. Other servers must use
